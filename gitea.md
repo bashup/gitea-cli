@@ -20,6 +20,7 @@ This file is the source code and main tests for the [generated gitea client](bin
 # dummy `curl` for testing
     $ curl_status=200
     $ GITEA_URL=https://example.com/gitea
+    $ GITEA_USER=some_user
     $ GITEA_API_TOKEN=EXAMPLE_TOKEN
     $ curl() {
     >     { printf -v REPLY ' %q' "curl" "$@"; echo "${REPLY# }"; cat; } >&2;
@@ -52,6 +53,83 @@ gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
     [1]
 ~~~
 
+### gitea deploy-key *repo keytitle key*
+
+Add a deployment key *key* named *keytitle* to *repo*.  Returns success if the key was successfully added.
+
+```shell
+gitea.deploy-key() {
+    split_repo "$1"
+    jmap title "$2" key "$3" | json auth api 201 /repos/$REPLY/keys
+}
+```
+
+~~~shell
+    $ curl_status=201 gitea deploy-key foo/bar baz spam
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
+    {
+      "title": "baz",
+      "key": "spam"
+    }
+~~~
+
+### gitea new *repo [opts...]*
+
+Create the repository; *opts* are key-value pairs to pass to the API, such as `description` and `private=`.  Defaults from `${GITEA_CREATE_DEFAULTS[@]}` are used first, if set.  A deploy key is automatically set if `$GITEA_DEPLOY_KEY` is non-empty; its title will be `$GITEA_DEPLOY_KEY_TITLE` or `"default"` if empty or missing:
+
+```shell
+gitea.new() {
+    split_repo "$1"; local org="${REPLY[1]}" repo="${REPLY[2]}"
+    if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
+    jmap name "$repo" "${GITEA_CREATE_DEFAULTS[@]}" "${@:2}" |
+        json api "200|201" "$org/repos?token=$GITEA_API_TOKEN"
+    [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
+}
+```
+
+~~~shell
+# Defaults apply before command line; default API url is /org/ORGNAME/repos
+    $ GITEA_CREATE_DEFAULTS=(private= true)
+    $ gitea new biz/baz description whatever
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/biz/repos\?token=EXAMPLE_TOKEN
+    {
+      "name": "baz",
+      "private": true,
+      "description": "whatever"
+    }
+# When the repo is the current user, the API url is /user/repos
+    $ gitea new some_user/spam private= false
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
+    {
+      "name": "spam",
+      "private": false
+    }
+# Deployment happens if you provide a GITEA_DEPLOY_KEY
+    $ GITEA_DEPLOY_KEY=example-key curl_status=201 gitea new foo/bar
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
+    {
+      "name": "bar",
+      "private": true
+    }
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
+    {
+      "title": "default",
+      "key": "example-key"
+    }
+# and it can have a GITEA_DEPLOY_KEY_TITLE
+    $ GITEA_DEPLOY_KEY=example-key GITEA_DEPLOY_KEY_TITLE=sample-title curl_status=201 gitea new foo/bar
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
+    {
+      "name": "bar",
+      "private": true
+    }
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
+    {
+      "title": "sample-title",
+      "key": "example-key"
+    }
+~~~
+
 
 
 ## Utilities
@@ -81,6 +159,38 @@ split_repo() {
 ~~~
 
 ### json/jq
+
+#### jmap
+
+The `jmap` function takes a series of key-value argument pairs and outputs a JSON-encoded mapping using `jq`.  Keys with a trailing `=` treat their value as a JSON-encoded value or jq expression; all others are treated as strings for jq to encode:
+
+```shell
+jmap() {
+    local filter='{}' opts=(-n) arg=1
+    while (($#)); do
+        if [[ $1 == *= ]]; then
+            filter+=" | .$1 $2"
+        else
+            filter+=" | .$1=\$__$arg"
+            opts+=(--arg "__$arg" "$2")
+            let arg++
+        fi
+        shift 2
+    done
+    jq "${opts[@]}" "$filter"
+}
+```
+
+~~~shell
+    $ jmap foo bar baz spam thing= true calc= 21 blue= '.calc*2'
+    {
+      "foo": "bar",
+      "baz": "spam",
+      "thing": true,
+      "calc": 21,
+      "blue": 42
+    }
+~~~
 
 ### API Wrappers
 

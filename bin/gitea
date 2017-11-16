@@ -1,8 +1,33 @@
 #!/usr/bin/env bash
 gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
+gitea.deploy() {
+    split_repo "$1"
+    jmap title "$2" key "$3" | json auth api 201 /repos/$REPLY/keys
+}
+gitea.new() {
+    split_repo "$1"; local org="${REPLY[1]}" repo="${REPLY[2]}"
+    if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
+    jmap name "$repo" "${GITEA_CREATE_DEFAULTS[@]}" "${@:2}" |
+        json api "200|201" "$org/repos?token=$GITEA_API_TOKEN"
+    [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
+}
 split_repo() {
     [[ "$1" == */* ]] || set -- "$GITEA_USER/$1";
     REPLY=("$1" "${1%/*}" "${1##*/}")
+}
+jmap() {
+    local filter='{}' opts=(-n) arg=1
+    while (($#)); do
+        if [[ $1 == *= ]]; then
+            filter+=" | .$1 $2"
+        else
+            filter+=" | .$1=\$__$arg"
+            opts+=(--arg "__$arg" "$2")
+            let arg++
+        fi
+        shift 2
+    done
+    jq "${opts[@]}" "$filter"
 }
 json() { "$@" -X POST -H "Content-Type: application/json" -d @-; }
 auth() { "$@" -H "Authorization: token $GITEA_API_TOKEN"; }
