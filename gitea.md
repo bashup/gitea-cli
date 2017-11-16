@@ -10,13 +10,10 @@ This file is the source code and main tests for the [generated gitea client](bin
 # Source the functions in this file and initialize as if the loco command were running:
     $ source $TESTDIR/$TESTFILE; set +e
     $ gitea.no-op() { :;}
-    $ loco_config() {
-    >     # Null out all configuration for testing
-    >     LOCO_SITE_CONFIG=/dev/null
-    >     LOCO_USER_CONFIG=/dev/null
-    >     LOCO_PROJECT=/dev/null
-    >     _loco_config
-    > }
+# Ignore/null out all configuration for testing
+    $ loco_user_config() { :;}
+    $ loco_site_config() { :;}
+    $ loco_find_project() { LOCO_PROJECT=/dev/null; }
     $ loco_main no-op
 
 # dummy `curl` for testing
@@ -258,6 +255,7 @@ We override loco's configuration process in a few ways: first, our command name/
 loco_preconfig() {
     LOCO_SCRIPT=$BASH_SOURCE
     LOCO_SITE_CONFIG=/etc/gitea-cli/gitea-config
+    LOCO_USER_CONFIG=$HOME/.config/gitearc
     LOCO_NAME=gitea
     LOCO_FILE=(.gitearc)
     PROJECT_NAME="${PROJECT_NAME-$(basename "$PWD")}"

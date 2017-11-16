@@ -56,6 +56,7 @@ api() {
 loco_preconfig() {
     LOCO_SCRIPT=$BASH_SOURCE
     LOCO_SITE_CONFIG=/etc/gitea-cli/gitea-config
+    LOCO_USER_CONFIG=$HOME/.config/gitearc
     LOCO_NAME=gitea
     LOCO_FILE=(.gitearc)
     PROJECT_NAME="${PROJECT_NAME-$(basename "$PWD")}"
