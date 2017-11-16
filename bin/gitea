@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
-gitea.deploy() {
+gitea.deploy-key() {
     split_repo "$1"
     jmap title "$2" key "$3" | json auth api 201 /repos/$REPLY/keys
 }
@@ -9,7 +9,7 @@ gitea.new() {
     if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
     jmap name "$repo" "${GITEA_CREATE_DEFAULTS[@]}" "${@:2}" |
         json api "200|201" "$org/repos?token=$GITEA_API_TOKEN"
-    [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
+    [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
 }
 split_repo() {
     [[ "$1" == */* ]] || set -- "$GITEA_USER/$1";
