@@ -2,6 +2,25 @@
 : '
 <!-- ex: set syntax=markdown : '; eval "$(mdsh -E "$BASH_SOURCE")"; # -->
 
+### Contents
+
+<!-- toc -->
+
+- [An Extensible CLI for gitea and gogs](#an-extensible-cli-for-gitea-and-gogs)
+  * [Commands](#commands)
+    + [gitea exists *repo*](#gitea-exists-repo)
+    + [gitea deploy-key *repo keytitle key*](#gitea-deploy-key-repo-keytitle-key)
+    + [gitea new *repo [opts...]*](#gitea-new-repo-opts)
+  * [Utilities](#utilities)
+    + [Repository Names](#repository-names)
+      - [split_repo](#split_repo)
+    + [json/jq](#jsonjq)
+      - [jmap](#jmap)
+    + [API Wrappers](#api-wrappers)
+  * [loco configuration](#loco-configuration)
+
+<!-- tocstop -->
+
 # An Extensible CLI for gitea and gogs
 
 This file is the source code and main tests for the [generated gitea client](bin/gitea).  Tests look like this:
@@ -10,6 +29,7 @@ This file is the source code and main tests for the [generated gitea client](bin
 # Source the functions in this file and initialize as if the loco command were running:
     $ source $TESTDIR/$TESTFILE; set +e
     $ gitea.no-op() { :;}
+
 # Ignore/null out all configuration for testing
     $ loco_user_config() { :;}
     $ loco_site_config() { :;}
@@ -109,6 +129,7 @@ gitea.new() {
       "private": true,
       "description": "whatever"
     }
+
 # When the repo is the current user, the API url is /user/repos
     $ gitea new some_user/spam private= false
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
@@ -116,6 +137,7 @@ gitea.new() {
       "name": "spam",
       "private": false
     }
+
 # Deployment happens if you provide a GITEA_DEPLOY_KEY
     $ GITEA_DEPLOY_KEY=example-key curl_status=201 gitea new foo/bar
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
@@ -128,6 +150,7 @@ gitea.new() {
       "title": "default",
       "key": "example-key"
     }
+
 # and it can have a GITEA_DEPLOY_KEY_TITLE
     $ GITEA_DEPLOY_KEY=example-key GITEA_DEPLOY_KEY_TITLE=sample-title curl_status=201 gitea new foo/bar
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
