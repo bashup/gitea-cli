@@ -17,6 +17,25 @@
 # FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+GITEA_CREATE_DEFAULTS=()
+gitea.--with() {
+    local cargs=(); ! ((${#GITEA_CREATE_DEFAULTS[@]})) || cargs+=("${GITEA_CREATE_DEFAULTS[@]}")
+    cargs+=("${@:1:2}"); local GITEA_CREATE_DEFAULTS=("${cargs[@]}")
+    gitea "${@:3}"
+}
+gitea.--description() { gitea --with description "$1" "${@:2}"; }
+gitea.--desc()        { gitea --description "$@"; }
+gitea.-d()            { gitea --description "$@"; }
+gitea.--public() { gitea --with private= false "$@"; }
+gitea.-p()       { gitea --public "$@"; }
+gitea.--private() { gitea --with private= true "$@"; }
+gitea.-P()        { gitea --private "$@"; }
+gitea.--repo() {
+    split_repo "$1"; local PROJECT_ORG="${REPLY[1]}" PROJECT_NAME="${REPLY[2]}"; gitea "${@:2}"
+}
+gitea.-r() { gitea --repo "$@"; }
+gitea.--tag()  { local PROJECT_TAG="$1"; gitea "${@:2}" ; }
+gitea.-t()     { gitea --tag "$@"; }
 gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
 gitea.deploy-key() {
     split_repo "$1"

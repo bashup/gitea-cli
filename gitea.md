@@ -7,6 +7,13 @@
 <!-- toc -->
 
 - [An Extensible CLI for gitea and gogs](#an-extensible-cli-for-gitea-and-gogs)
+  * [Prefix Options](#prefix-options)
+    + [--with *key* *val*](#--with-key-val)
+    + [--description / --desc / -d *description*](#--description----desc---d-description)
+    + [--public / -p](#--public---p)
+    + [--private / -P](#--private---p)
+    + [--repo / -r *repo*](#--repo---r-repo)
+    + [--tag / -t *version*](#--tag---t-version)
   * [Commands](#commands)
     + [gitea exists *repo*](#gitea-exists-repo)
     + [gitea deploy-key *repo keytitle key*](#gitea-deploy-key-repo-keytitle-key)
@@ -64,7 +71,126 @@ source realpaths; realpath.location "$MDSH_SOURCE"
 echo; sed -e '1,2d; s/^\(.\)/# \1/; s/^$/#/;' "$REPLY/LICENSE"; echo
 ```
 
+## Prefix Options
 
+The prefix options work by setting variables and invoking the remainder of the command line, so for testing we'll make a subcommand that dumps out those variables:
+
+~~~shell
+    $ gitea.dump() {
+    >     declare -p PROJECT_ORG PROJECT_NAME PROJECT_TAG GITEA_CREATE_DEFAULTS 2>/dev/null || true
+    > }
+    $ gitea dump
+    declare -- PROJECT_NAME="gitea.md"
+    declare -a GITEA_CREATE_DEFAULTS='()'
+
+# Try some combos and abbreviations:
+
+    $ gitea -t 1.2 -r bada/bing --desc foobly --with x y -p -P dump
+    declare -- PROJECT_ORG="bada"
+    declare -- PROJECT_NAME="bing"
+    declare -- PROJECT_TAG="1.2"
+    declare -a GITEA_CREATE_DEFAULTS='([0]="description" [1]="foobly" [2]="x" [3]="y" [4]="private=" [5]="false" [6]="private=" [7]="true")'
+~~~
+
+### --with *key* *val*
+
+`--with` alters `GITEA_CREATE_DEFAULTS` to add the given key-value pair:
+
+```shell
+GITEA_CREATE_DEFAULTS=()
+gitea.--with() {
+    local cargs=(); ! ((${#GITEA_CREATE_DEFAULTS[@]})) || cargs+=("${GITEA_CREATE_DEFAULTS[@]}")
+    cargs+=("${@:1:2}"); local GITEA_CREATE_DEFAULTS=("${cargs[@]}")
+    gitea "${@:3}"
+}
+```
+
+~~~shell
+    $ gitea --with foo bar dump
+    declare -- PROJECT_NAME="gitea.md"
+    declare -a GITEA_CREATE_DEFAULTS='([0]="foo" [1]="bar")'
+~~~
+
+### --description / --desc / -d *description*
+
+These options are short for `--with description` *description*:
+
+```shell
+gitea.--description() { gitea --with description "$1" "${@:2}"; }
+gitea.--desc()        { gitea --description "$@"; }
+gitea.-d()            { gitea --description "$@"; }
+```
+
+~~~shell
+    $ gitea --description something dump
+    declare -- PROJECT_NAME="gitea.md"
+    declare -a GITEA_CREATE_DEFAULTS='([0]="description" [1]="something")'
+~~~
+
+### --public / -p
+
+```shell
+gitea.--public() { gitea --with private= false "$@"; }
+gitea.-p()       { gitea --public "$@"; }
+```
+
+~~~shell
+    $ gitea --public dump
+    declare -- PROJECT_NAME="gitea.md"
+    declare -a GITEA_CREATE_DEFAULTS='([0]="private=" [1]="false")'
+~~~
+
+### --private / -P
+
+```shell
+gitea.--private() { gitea --with private= true "$@"; }
+gitea.-P()        { gitea --private "$@"; }
+```
+
+~~~shell
+    $ gitea --private dump
+    declare -- PROJECT_NAME="gitea.md"
+    declare -a GITEA_CREATE_DEFAULTS='([0]="private=" [1]="true")'
+~~~
+
+### --repo / -r *repo*
+
+Set `PROJECT_ORG` and `PROJECT_NAME` from *repo*:
+
+```shell
+gitea.--repo() {
+    split_repo "$1"; local PROJECT_ORG="${REPLY[1]}" PROJECT_NAME="${REPLY[2]}"; gitea "${@:2}"
+}
+gitea.-r() { gitea --repo "$@"; }
+```
+
+~~~shell
+    $ gitea --repo foo/bar dump
+    declare -- PROJECT_ORG="foo"
+    declare -- PROJECT_NAME="bar"
+    declare -a GITEA_CREATE_DEFAULTS='()'
+
+    $ gitea --repo baz dump
+    declare -- PROJECT_ORG="some_user"
+    declare -- PROJECT_NAME="baz"
+    declare -a GITEA_CREATE_DEFAULTS='()'
+~~~
+
+### --tag / -t *version*
+
+Set `PROJECT_TAG` from *version*:
+
+```shell
+gitea.--tag()  { local PROJECT_TAG="$1"; gitea "${@:2}" ; }
+gitea.-t()     { gitea --tag "$@"; }
+```
+
+~~~shell
+    $ gitea --tag a.b dump
+    declare -- PROJECT_NAME="gitea.md"
+    declare -- PROJECT_TAG="a.b"
+    declare -a GITEA_CREATE_DEFAULTS='()'
+~~~
 
 ## Commands
 
@@ -131,11 +257,12 @@ gitea.new() {
     }
 
 # When the repo is the current user, the API url is /user/repos
-    $ gitea new some_user/spam private= false
+    $ gitea --public -d something new some_user/spam
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
     {
       "name": "spam",
-      "private": false
+      "private": false,
+      "description": "something"
     }
 
 # Deployment happens if you provide a GITEA_DEPLOY_KEY

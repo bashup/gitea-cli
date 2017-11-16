@@ -24,9 +24,15 @@ The built-in commands use the following argument syntax:
 
 You can also add your own subcommands by defining functions in one of the standard [configuration files](#configuration-files).  A functions named `gitea.X` implements a subcommand named `X`.  So, if for example you run  `gitea foo arg1 arg2...`, the CLI tool will call a function named `gitea.foo` with the supplied arguments.  All of the functions defined in the [tool source](gitea.md) are available to you to use, as well as those provided by [loco](https://github.com/bashup/loco).
 
+### Prefix Options
 
+The following options can be used *before* various commands to alter their behavior.
 
+Creation prefixes (use before `new` or `vendor`):
 
+* `--description`, `--desc`, or `-d` -- set the description for the created repository, e.g. `gitea -d "something" new foo/bar`.
+* `--public` or `-p` -- make the created repository public, e.g. `gitea --public new some/thing`
+* `--private` or `-P` -- make the created repository private, e.g. `gitea --private new some/thing`
 
 ## Configuration and Extension
 
