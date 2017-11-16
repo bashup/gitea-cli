@@ -1,6 +1,6 @@
 # An Extensible Command-line Client for Gitea and Gogs
 
-`gitea` is an extensible tool for interacting with a gogs or gitea instance via its API.  It's implemented as a [loco](https://github.com/bashup/loco) extension, which means that it's extensible and configurable via a `~/.gitearc` and `/etc/gitea-cli/config`.
+`gitea` is an extensible tool for interacting with a gogs or gitea instance via its API.  It's implemented as a [loco](https://github.com/bashup/loco) extension, which means that it's extensible and configurable via a `~/.gitearc` and `/etc/gitea-cli/gitea-config`.
 
 You can install it by copying [the binary](bin/gitea) onto your `PATH`, or by using [basher](https://github.com/basherpm/basher) to `basher install bashup/gitea-cli`.  In either case, you must have [jq](https://github.com/stedolan/jq/)  and `curl` installed as well.  You will then gain access to the following commands:
 
@@ -8,11 +8,11 @@ You can install it by copying [the binary](bin/gitea) onto your `PATH`, or by us
 * `gitea deploy-key` *repo keytitle key* -- add the named key as a deployment key for *repo*
 * `gitea exists` *repo* -- return success if *repo* exists, otherwise fail
 
-You can also add your own subcommands by defining functions in `~/.gitearc` and `/etc/gitea-cli/config` of the form `gitea.X`, where `X` is the name of the desired subcommand.  That is, if you define a function `gitea.foo()`, then `gitea foo` *args...* will invoke your function with the given arguments.
+You can also add your own subcommands by defining functions in `~/.gitearc` and `/etc/gitea-cli/gitea-config` of the form `gitea.X`, where `X` is the name of the desired subcommand.  That is, if you define a function `gitea.foo()`, then `gitea foo` *args...* will invoke your function with the given arguments.
 
 ## Configuration
 
-In order for the predefined subcommands to work, you must have the following environment variables set, either by being in your environment to begin with, or by defining them in  `~/.gitearc` or `/etc/gitea-cli/config`:
+In order for the predefined subcommands to work, you must have the following environment variables set, either by being in your environment to begin with, or by defining them in  `~/.gitearc` or `/etc/gitea-cli/gitea-config`:
 
 * `GITEA_USER` -- the user on whose behalf API operations will be performed
 * `GITEA_API_TOKEN` -- the user's API token

@@ -255,8 +255,8 @@ We override loco's configuration process in a few ways: first, our command name/
 ```shell
 loco_preconfig() {
     LOCO_SCRIPT=$BASH_SOURCE
-    LOCO_SITE_CONFIG=/etc/gitea-cli/config
-    LOCO_COMMAND=gitea
+    LOCO_SITE_CONFIG=/etc/gitea-cli/gitea-config
+    LOCO_NAME=gitea
     PROJECT_NAME="${PROJECT_NAME-$(basename "$PWD")}"
 }
 loco_loadproject() { :; }
