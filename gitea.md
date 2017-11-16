@@ -11,8 +11,10 @@ This file is the source code and main tests for the [generated gitea client](bin
     $ source $TESTDIR/$TESTFILE; set +e
     $ gitea.no-op() { :;}
     $ loco_config() {
+    >     # Null out all configuration for testing
     >     LOCO_SITE_CONFIG=/dev/null
     >     LOCO_USER_CONFIG=/dev/null
+    >     LOCO_PROJECT=/dev/null
     >     _loco_config
     > }
     $ loco_main no-op
@@ -250,18 +252,20 @@ api() {
 
 ## loco configuration
 
-We override loco's configuration process in a few ways: first, our command name/function prefix is always `gitea`, and we use `/etc/gitea-cli/config` file as the site-wide configuration file.  We also disable loco's "find the project root" functionality because it's not relevant for most use cases.  Instead, we default a `PROJECT_NAME` setting to the basename of the current working directory (which is helpful for `gitea vendor`.)
+We override loco's configuration process in a few ways: first, our command name/function prefix is always `gitea`, and we use `/etc/gitea-cli/config` file as the site-wide configuration file.  We also change loco's "find the project root" functionality so it looks for a `.gitearc` but doesn't change to that directory.  We also default a `PROJECT_NAME` setting to the basename of the current working directory (which is helpful for `gitea vendor`.)
 
 ```shell
 loco_preconfig() {
     LOCO_SCRIPT=$BASH_SOURCE
     LOCO_SITE_CONFIG=/etc/gitea-cli/gitea-config
     LOCO_NAME=gitea
+    LOCO_FILE=(.gitearc)
     PROJECT_NAME="${PROJECT_NAME-$(basename "$PWD")}"
 }
-loco_loadproject() { :; }
-loco_findproject() { LOCO_PROJECT=''; }
-loco_findroot() { LOCO_ROOT=$PWD; }
+loco_findproject() {
+    findup "$LOCO_PWD" "${LOCO_FILE[@]}" && LOCO_PROJECT=$REPLY || LOCO_PROJECT=/dev/null
+}
+loco_findroot() { LOCO_ROOT=$LOCO_PWD; }
 ```
 
 Having configured everything we need, we can simply include loco's source code to do the rest:

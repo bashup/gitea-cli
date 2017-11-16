@@ -57,11 +57,13 @@ loco_preconfig() {
     LOCO_SCRIPT=$BASH_SOURCE
     LOCO_SITE_CONFIG=/etc/gitea-cli/gitea-config
     LOCO_NAME=gitea
+    LOCO_FILE=(.gitearc)
     PROJECT_NAME="${PROJECT_NAME-$(basename "$PWD")}"
 }
-loco_loadproject() { :; }
-loco_findproject() { LOCO_PROJECT=''; }
-loco_findroot() { LOCO_ROOT=$PWD; }
+loco_findproject() {
+    findup "$LOCO_PWD" "${LOCO_FILE[@]}" && LOCO_PROJECT=$REPLY || LOCO_PROJECT=/dev/null
+}
+loco_findroot() { LOCO_ROOT=$LOCO_PWD; }
 #!/usr/bin/env bash
 
 realpath.location() { realpath.follow "$1"; realpath.absolute "$REPLY" ".."; }

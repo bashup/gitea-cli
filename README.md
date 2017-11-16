@@ -1,8 +1,8 @@
 # An Extensible Command-line Client for Gitea and Gogs
 
-`gitea` is an extensible tool for interacting with a gogs or gitea instance via its API.  It's implemented as a [loco](https://github.com/bashup/loco) extension, which means that it's extensible and configurable via a `~/.gitearc` and `/etc/gitea-cli/gitea-config`.
+`gitea` is an extensible tool for interacting with a gogs or gitea instance via its API.  It's implemented as a [loco](https://github.com/bashup/loco) extension, which means that it's extensible and configurable via a `~/.gitearc` and `/etc/gitea-cli/gitea-config`.  You can also place configuration in a `.gitearc` file anywhere, and it will be loaded whenever the `gitea` tool is run in that location or a subdirectory thereof.  The site-wide and user configurations run first, then the nearest `.gitearc` above the current directory, with later config files being able to override configuration or commands defined in earlier ones.  (Only one `.gitearc` in or above the current directory is loaded, however.)
 
-You can install it by copying [the binary](bin/gitea) onto your `PATH`, or by using [basher](https://github.com/basherpm/basher) to `basher install bashup/gitea-cli`.  In either case, you must have [jq](https://github.com/stedolan/jq/)  and `curl` installed as well.  You will then gain access to the following commands:
+You can install the tool by copying [the binary](bin/gitea) onto your `PATH`, or by using [basher](https://github.com/basherpm/basher) to `basher install bashup/gitea-cli`.  In either case, you must have [jq](https://github.com/stedolan/jq/)  and `curl` installed as well.  You will then gain access to the following commands:
 
 * `gitea new` *repo [create-opts...]*  -- create *repo* with the specified options
 * `gitea deploy-key` *repo keytitle key* -- add the named key as a deployment key for *repo*
