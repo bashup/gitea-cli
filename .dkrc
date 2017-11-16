@@ -9,6 +9,7 @@ dk use: bash32            # enable doing tests/console/etc. in bash3.2 w/docker
 
 dk.bootstrap() {
     require loco github bashup/loco master bin/loco
+    require mdsh github bashup/mdsh master bin/mdsh
     require-any jq
     require-any yaml2json
 }

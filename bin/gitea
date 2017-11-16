@@ -1,1 +1,188 @@
+#!/usr/bin/env bash
+json() { "$@" -X POST -H "Content-Type: application/json" -d @-; }
+auth() { "$@" -H "Authorization: token $GITEA_API_TOKEN"; }
+api() {
+    REPLY=$(curl --silent --write-out %{http_code} --output /dev/null "${@:3}" "$GITEA_URL/api/v1/${2#/}")
+    eval 'case $REPLY in '"$1) true ;; *) false ;; esac"
+}
+loco_preconfig() {
+    LOCO_SCRIPT=$BASH_SOURCE
+    LOCO_SITE_CONFIG=/etc/gitea-cli/config
+    LOCO_COMMAND=gitea
+    PROJECT_NAME="${PROJECT_NAME-$(basename "$PWD")}"
+}
+loco_loadproject() { :; }
+loco_findproject() { LOCO_PROJECT=''; }
+loco_findroot() { LOCO_ROOT=$PWD; }
+#!/usr/bin/env bash
 
+realpath.location() { realpath.follow "$1"; realpath.absolute "$REPLY" ".."; }
+realpath.resolved() { realpath.follow "$1"; realpath.absolute "$REPLY"; }
+realpath.dirname()  { if [[ $1 =~ /+[^/]+/*$ ]]; then REPLY="${1%${BASH_REMATCH}}"; REPLY=${REPLY:-/}; else REPLY=.; fi }
+realpath.basename() { if [[ $1 =~ /*([^/]+)/*$ ]]; then REPLY="${BASH_REMATCH[1]}"; else REPLY=/; fi }
+
+realpath.follow() {
+    local target
+    while [[ -L "$1" ]] && target=$(readlink -- "$1"); do
+        realpath.dirname "$1"
+        # Resolve symlink target relative to symlink's directory
+        [[ $REPLY != . && $target != /* ]] && REPLY=$REPLY/$target || REPLY=$target
+        # Break out if we found a symlink loop
+        for target; do [[ $REPLY == "$target" ]] && break 2; done
+        # Add current result to the loop-detect list and tail-recurse
+        set -- "$REPLY" "$@"
+    done
+    REPLY="$1"
+}
+
+realpath.absolute() {
+    REPLY=$PWD; local no_eg; shopt -q extglob || { no_eg=y; shopt -s extglob; }
+    while (($#)); do case $1 in
+        /*) REPLY=/; set -- "${1##+(/)}" "${@:2}" ;;
+        */*) set -- "${1%%/*}" "${1##${1%%/*}+(/)}" "${@:2}" ;;
+        ''|.) shift ;;
+        ..) realpath.dirname "$REPLY"; shift ;;
+        *) REPLY="${REPLY%/}/$1"; shift ;;
+    esac; done; ${no_eg:+shopt -u extglob}
+}
+
+realpath.canonical() {
+    local target=""
+    realpath.follow "$1"; set -- "$REPLY"   # $1 is now resolved
+    realpath.basename "$1"; target=$REPLY   # target = basename $1
+    realpath.dirname "$1";
+    [[ $REPLY != "$1" ]] && realpath.canonical "$REPLY"; # recurse unless root
+    realpath.absolute "$REPLY" "$target";   # combine canon parent w/basename
+}
+
+realpath.relative() {
+    local target=""
+    realpath.absolute "$1"; set -- "$REPLY" "${@:2}"; realpath.absolute "${2-$PWD}" X
+    while realpath.dirname "$REPLY"; [[ "$1" != "$REPLY" && "$1" == "${1#${REPLY%/}/}" ]]; do
+        target=../$target
+    done
+    [[ $1 == "$REPLY" ]] && REPLY=${target%/} || REPLY="$target${1#${REPLY%/}/}"
+    REPLY=${REPLY:-.}
+}
+
+#!/usr/bin/env bash
+
+# LICENSE
+# -------
+# `loco` is copyright 2015-2017 PJ Eby, and MIT-licensed as follows:
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without
+# limitation the rights to use, copy, modify, merge, publish, distribute,
+# sublicense, and/or sell copies of the Software, and to permit persons to
+# whom the Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT OWNERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+# For documentation, see https://github.com/bashup/loco
+
+set -euo pipefail
+
+fn_exists() { declare -F -- "$1"; } >/dev/null
+fn_copy()   { REPLY="$(declare -f $1)"; eval "$2 ${REPLY#$1}"; }
+findup()    { walkup "${1:-$PWD}" reply_if_exists "${@:2}"; }
+
+reply_if_exists() {
+    local pat dir=$1 IFS= ; shift
+    for pat; do
+        for REPLY in ${dir%/}/$pat; do [[ -f "$REPLY" ]] && return 0; done
+    done
+    return 1
+}
+
+fn_exists realpath.absolute || source realpaths
+
+walkup() {
+    realpath.absolute "$1"
+    until set -- "$REPLY" "${@:2}"; "$2" "$1" "${@:3}"; do
+        [[ "$1" != "/" ]] || return 1; realpath.dirname "$1"
+    done
+}
+
+_loco_usage() { loco_error "Usage: $LOCO_COMMAND command args..."; }
+_loco_error() { echo "$@" >&2; exit 64; }
+_loco_cmd() { REPLY="$LOCO_NAME.$1"; }
+_loco_exec() { loco_error "Unrecognized command: $1"; }
+_loco_exists() { type -t "$1"; } >/dev/null
+
+_loco_do() {
+    [[ "${1-}" ]] || loco_usage   # No command given, exit w/usage
+    REPLY=""; loco_cmd "$1"; local cmd="$REPLY"
+    [[ "$cmd" ]] || loco_usage   # Unrecognized command, exit w/usage
+
+    if loco_exists "$cmd"; then
+        # Command, alias, function, or builtin exists
+        shift; "$cmd" "$@"
+    else
+        # Invoke the default command interpreter
+        loco_exec "$@"
+    fi
+}
+
+_loco_findproject() {
+    findup "$LOCO_PWD" "${LOCO_FILE[@]}" && LOCO_PROJECT=$REPLY ||
+        loco_error "Can't find $LOCO_FILE here";
+}
+_loco_preconfig() { true; }
+_loco_postconfig() { true; }
+_loco_findroot() { realpath.dirname "$LOCO_PROJECT"; LOCO_ROOT=$REPLY; }
+_loco_loadproject() { cd "$LOCO_ROOT";  $LOCO_LOAD "$1"; }
+_loco_site_config() { source "$1"; }
+_loco_user_config() { source "$1"; }
+
+
+# Find our configuration, exposing relevant paths and defaults
+
+_loco_config() {
+    LOCO_ARGS=("$@")
+    loco_preconfig "$@"
+    ${LOCO_COMMAND:+:} realpath.basename "$LOCO_SCRIPT"; LOCO_COMMAND="${LOCO_COMMAND-$REPLY}"
+    LOCO_NAME="${LOCO_NAME-${LOCO_COMMAND}}"
+    LOCO_PWD="${LOCO_PWD-$PWD}"
+
+    LOCO_SITE_CONFIG="${LOCO_SITE_CONFIG-/etc/$LOCO_NAME/config}"
+    [ -f "$LOCO_SITE_CONFIG" ] && loco_site_config "$LOCO_SITE_CONFIG"
+    LOCO_RC="${LOCO_RC-.${LOCO_NAME}rc}"
+    LOCO_USER_CONFIG="${LOCO_USER_CONFIG-$HOME/$LOCO_RC}"
+    [ -f "$LOCO_USER_CONFIG" ] && loco_user_config "$LOCO_USER_CONFIG"
+
+    [[ ${LOCO_FILE-} ]] || LOCO_FILE=(".$LOCO_NAME")
+    LOCO_LOAD="${LOCO_LOAD-source}"
+    loco_postconfig "$@"
+}
+
+_loco_main() {
+    loco_config "$@"
+    ${LOCO_PROJECT:+:} loco_findproject "$@"
+    ${LOCO_ROOT:+:}    loco_findroot "$@"
+    loco_loadproject "$LOCO_PROJECT"
+    fn_exists $LOCO_NAME || eval "$LOCO_NAME() { loco_do \"\$@\"; }"
+    loco_do "$@"
+}
+
+# Initialize default function implementations
+for f in $(compgen -A function _loco_); do
+    fn_exists "${f#_}" || fn_copy "$f" "${f#_}"
+done
+
+# Clear all LOCO_*  variables before beginning
+for lv in ${!LOCO_@}; do unset $lv; done
+
+LOCO_SCRIPT=$0
+if [[ $0 == "$BASH_SOURCE" ]]; then loco_main "$@"; fi
