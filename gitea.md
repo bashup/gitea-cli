@@ -32,7 +32,20 @@ And source code like this:
 
 ```shell
 #!/usr/bin/env bash
+# ---
+# This file was automatically generated from gitea.md - DO NOT EDIT!
+# ---
 ```
+
+While mdsh metaprogramming code is like this:
+
+```shell mdsh
+# incorporate the LICENSE file as bash comments
+source realpaths; realpath.location "$MDSH_SOURCE"
+echo; sed -e '1,2d; s/^\(.\)/# \1/; s/^$/#/;' "$REPLY/LICENSE"; echo
+```
+
+
 
 ## Commands
 
@@ -254,5 +267,5 @@ loco_findroot() { LOCO_ROOT=$PWD; }
 Having configured everything we need, we can simply include loco's source code to do the rest:
 
 ```shell mdsh
-cat "$(command -v loco)"
+sed -e '/^# LICENSE$/,/^$/d' "$(command -v loco)"
 ```
