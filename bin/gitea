@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
+split_repo() {
+    [[ "$1" == */* ]] || set -- "$GITEA_USER/$1";
+    REPLY=("$1" "${1%/*}" "${1##*/}")
+}
 json() { "$@" -X POST -H "Content-Type: application/json" -d @-; }
 auth() { "$@" -H "Authorization: token $GITEA_API_TOKEN"; }
 api() {

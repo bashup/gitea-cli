@@ -10,7 +10,12 @@ This file is the source code and main tests for the [generated gitea client](bin
 # Source the functions in this file and initialize as if the loco command were running:
     $ source $TESTDIR/$TESTFILE; set +e
     $ gitea.no-op() { :;}
-    $ LOCO_SITE_CONFIG=. LOCO_USER_CONFIG=. loco_main no-op
+    $ loco_config() {
+    >     LOCO_SITE_CONFIG=/dev/null
+    >     LOCO_USER_CONFIG=/dev/null
+    >     _loco_config
+    > }
+    $ loco_main no-op
 
 # dummy `curl` for testing
     $ curl_status=200
@@ -20,7 +25,6 @@ This file is the source code and main tests for the [generated gitea client](bin
     >     { printf -v REPLY ' %q' "curl" "$@"; echo "${REPLY# }"; cat; } >&2;
     >     echo $curl_status;
     > }
-
 ~~~
 
 And source code like this:
@@ -29,11 +33,52 @@ And source code like this:
 #!/usr/bin/env bash
 ```
 
+## Commands
+
+### gitea exists *repo*
+
+Return success if the repository exists:
+
+```shell
+gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
+```
+
+~~~shell
+    $ gitea exists foo/bar </dev/null; echo [$?]
+    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    [0]
+    $ curl_status=404 gitea exists foo/bar </dev/null; echo [$?]
+    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    [1]
+~~~
+
 
 
 ## Utilities
 
 ### Repository Names
+
+#### split_repo
+
+`split_repo` splits `$1` into an organization in `${REPLY[1]}` and a repo in `${REPLY[2]}`.  The organization defaults to `$GITEA_USER` if there's no slash in `$1`.   `$REPLY` (aka `${REPLY[0]}`) contains the fully qualified name, with the defaulted organization included:
+
+```shell
+split_repo() {
+    [[ "$1" == */* ]] || set -- "$GITEA_USER/$1";
+    REPLY=("$1" "${1%/*}" "${1##*/}")
+}
+```
+
+~~~shell
+    $ split_repo foo/bar; printf '%s\n' "${REPLY[@]}"
+    foo/bar
+    foo
+    bar
+    $ GITEA_USER=baz; split_repo spam; printf '%s\n' "${REPLY[@]}"
+    baz/spam
+    baz
+    spam
+~~~
 
 ### json/jq
 
