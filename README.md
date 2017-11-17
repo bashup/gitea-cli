@@ -83,7 +83,7 @@ would run a vendor import with `PROJECT_ORG=foo`, `PROJECT_NAME=bar` and `PROJEC
 
 Configuration is loaded by sourcing bash script files from the following locations, in this order, if they exist:
 
-* `/etc/gitea-cli/gitea-config`
+* `/etc/gitea-cli/gitearc`
 * `$HOME/.config/gitearc`
 * The *nearest* `.gitearc` found in or above the current directory (i.e., only one is loaded, even if more than one exists)
 
@@ -103,7 +103,7 @@ These variables can also be set via config file(s) or runtime environment:
 
 * `GITEA_GIT_URL` -- the URL prefix used by the `vendor` command for `git clone` operations; defaults to `GITEA_URL` if not specified.  Can be a hostname and `:` for simple ssh URLs, or a full URL base like `git+ssh://user@host`.
 * `GITEA_DEPLOY_KEY`, `GITEA_DEPLOY_KEY_TITLE`  -- if set, new repositories will have this key automatically added to their deploy keys
-* `GITEA_CREATE_DEFAULTS` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE_DEFAULTS=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` to override it.
+* `GITEA_CREATE_DEFAULTS` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE_DEFAULTS=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` (or the equivalent, `gitea --public new some/repo`) to override it.
 
 
 

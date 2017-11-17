@@ -510,7 +510,7 @@ We override loco's configuration process in a few ways: first, our command name/
 ```shell
 loco_preconfig() {
     LOCO_SCRIPT=$BASH_SOURCE
-    LOCO_SITE_CONFIG=/etc/gitea-cli/gitea-config
+    LOCO_SITE_CONFIG=/etc/gitea-cli/gitearc
     LOCO_USER_CONFIG=$HOME/.config/gitearc
     LOCO_NAME=gitea
     LOCO_FILE=(.gitearc)
