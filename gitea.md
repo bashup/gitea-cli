@@ -79,11 +79,11 @@ The prefix options work by setting variables and invoking the remainder of the c
 
 ~~~shell
     $ gitea.dump() {
-    >     declare -p PROJECT_ORG PROJECT_NAME PROJECT_TAG GITEA_CREATE_DEFAULTS 2>/dev/null || true
+    >     declare -p PROJECT_ORG PROJECT_NAME PROJECT_TAG GITEA_CREATE 2>/dev/null || true
     > }
     $ gitea dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE_DEFAULTS='()'
+    declare -a GITEA_CREATE='()'
 
 # Try some combos and abbreviations:
 
@@ -91,18 +91,17 @@ The prefix options work by setting variables and invoking the remainder of the c
     declare -- PROJECT_ORG="bada"
     declare -- PROJECT_NAME="bing"
     declare -- PROJECT_TAG="1.2"
-    declare -a GITEA_CREATE_DEFAULTS='([0]="description" [1]="foobly" [2]="x" [3]="y" [4]="private=" [5]="false" [6]="private=" [7]="true")'
+    declare -a GITEA_CREATE='([0]="description" [1]="foobly" [2]="x" [3]="y" [4]="private=" [5]="false" [6]="private=" [7]="true")'
 ~~~
 
 ### --with *key* *val*
 
-`--with` alters `GITEA_CREATE_DEFAULTS` to add the given key-value pair:
+`--with` alters `GITEA_CREATE` to add the given key-value pair:
 
 ```shell
-GITEA_CREATE_DEFAULTS=()
+GITEA_CREATE=()
 gitea.--with() {
-    local cargs=(); ! ((${#GITEA_CREATE_DEFAULTS[@]})) || cargs+=("${GITEA_CREATE_DEFAULTS[@]}")
-    cargs+=("${@:1:2}"); local GITEA_CREATE_DEFAULTS=("${cargs[@]}")
+    local GITEA_CREATE=(${GITEA_CREATE[@]+"${GITEA_CREATE[@]}"} "${@:1:2}")
     gitea "${@:3}"
 }
 ```
@@ -110,7 +109,7 @@ gitea.--with() {
 ~~~shell
     $ gitea --with foo bar dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE_DEFAULTS='([0]="foo" [1]="bar")'
+    declare -a GITEA_CREATE='([0]="foo" [1]="bar")'
 ~~~
 
 ### --description / --desc / -d *description*
@@ -126,7 +125,7 @@ gitea.-d()            { gitea --description "$@"; }
 ~~~shell
     $ gitea --description something dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE_DEFAULTS='([0]="description" [1]="something")'
+    declare -a GITEA_CREATE='([0]="description" [1]="something")'
 ~~~
 
 ### --public / -p
@@ -139,7 +138,7 @@ gitea.-p()       { gitea --public "$@"; }
 ~~~shell
     $ gitea --public dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE_DEFAULTS='([0]="private=" [1]="false")'
+    declare -a GITEA_CREATE='([0]="private=" [1]="false")'
 ~~~
 
 ### --private / -P
@@ -152,7 +151,7 @@ gitea.-P()        { gitea --private "$@"; }
 ~~~shell
     $ gitea --private dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE_DEFAULTS='([0]="private=" [1]="true")'
+    declare -a GITEA_CREATE='([0]="private=" [1]="true")'
 ~~~
 
 ### --repo / -r *repo*
@@ -170,12 +169,12 @@ gitea.-r() { gitea --repo "$@"; }
     $ gitea --repo foo/bar dump
     declare -- PROJECT_ORG="foo"
     declare -- PROJECT_NAME="bar"
-    declare -a GITEA_CREATE_DEFAULTS='()'
+    declare -a GITEA_CREATE='()'
 
     $ gitea --repo baz dump
     declare -- PROJECT_ORG="some_user"
     declare -- PROJECT_NAME="baz"
-    declare -a GITEA_CREATE_DEFAULTS='()'
+    declare -a GITEA_CREATE='()'
 ~~~
 
 ### --tag / -t *version*
@@ -191,7 +190,7 @@ gitea.-t()     { gitea --tag "$@"; }
     $ gitea --tag a.b dump
     declare -- PROJECT_NAME="gitea.md"
     declare -- PROJECT_TAG="a.b"
-    declare -a GITEA_CREATE_DEFAULTS='()'
+    declare -a GITEA_CREATE='()'
 ~~~
 
 ## Commands
@@ -252,13 +251,13 @@ gitea.deploy-key() {
 
 ### gitea new *repo [opts...]*
 
-Create the repository; *opts* are key-value pairs to pass to the API, such as `description` and `private=`.  Defaults from `${GITEA_CREATE_DEFAULTS[@]}` are used first, if set.  A deploy key is automatically set if `$GITEA_DEPLOY_KEY` is non-empty; its title will be `$GITEA_DEPLOY_KEY_TITLE` or `"default"` if empty or missing:
+Create the repository; *opts* are key-value pairs to pass to the API, such as `description` and `private=`.  Defaults from `${GITEA_CREATE[@]}` are used first, if set.  A deploy key is automatically set if `$GITEA_DEPLOY_KEY` is non-empty; its title will be `$GITEA_DEPLOY_KEY_TITLE` or `"default"` if empty or missing:
 
 ```shell
 gitea.new() {
     split_repo "$1"; local org="${REPLY[1]}" repo="${REPLY[2]}"
     if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
-    jmap name "$repo" "${GITEA_CREATE_DEFAULTS[@]}" "${@:2}" |
+    jmap name "$repo" "${GITEA_CREATE[@]}" "${@:2}" |
         json api "200|201" "$org/repos?token=$GITEA_API_TOKEN"
     [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
 }
@@ -266,7 +265,7 @@ gitea.new() {
 
 ~~~shell
 # Defaults apply before command line; default API url is /org/ORGNAME/repos
-    $ GITEA_CREATE_DEFAULTS=(private= true)
+    $ GITEA_CREATE=(private= true)
     $ gitea new biz/baz description whatever
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/biz/repos\?token=EXAMPLE_TOKEN
     {

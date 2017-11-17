@@ -61,7 +61,7 @@ The `gitea vendor` command attempts to intelligently import the contents of the 
 
 By default, the repository name and organization will be the name of the current directory and `$GITEA_USER` respectively, but you can override these by setting `PROJECT_NAME` and `PROJECT_ORG` on the command line, or via the `--repo` prefix option.
 
-If the repository doesn't exist, it's created with the supplied *create-opts*, if any.  `GITEA_CREATE_DEFAULTS` and the default deploy key (if any) are applied.
+If the repository doesn't exist, it's created with the supplied *create-opts*, if any.  `GITEA_CREATE` and the default deploy key (if any) are applied.
 
 On the other hand, if the repository *does* exist, then  a `PROJECT_TAG` *must* be supplied (e.g. via `gitea --tag someversion vendor`).  It will be used to tag the newly imported version (as `vendor-someversion`).
 
@@ -103,7 +103,7 @@ These variables can also be set via config file(s) or runtime environment:
 
 * `GITEA_GIT_URL` -- the URL prefix used by the `vendor` command for `git clone` operations; defaults to `GITEA_URL` if not specified.  Can be a hostname and `:` for simple ssh URLs, or a full URL base like `git+ssh://user@host`.
 * `GITEA_DEPLOY_KEY`, `GITEA_DEPLOY_KEY_TITLE`  -- if set, new repositories will have this key automatically added to their deploy keys
-* `GITEA_CREATE_DEFAULTS` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE_DEFAULTS=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` (or the equivalent, `gitea --public new some/repo`) to override it.
+* `GITEA_CREATE` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` (or the equivalent, `gitea --public new some/repo`) to override it.
 
 
 
