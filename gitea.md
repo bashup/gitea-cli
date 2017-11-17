@@ -45,7 +45,7 @@ This file is the source code and main tests for the [generated gitea client](bin
 
 # dummy `curl` for testing
     $ curl_status=200
-    $ GITEA_URL=https://example.com/gitea
+    $ GITEA_URL=https://example.com/gitea/
     $ GITEA_USER=some_user
     $ GITEA_API_TOKEN=EXAMPLE_TOKEN
     $ curl() {
@@ -211,6 +211,23 @@ gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
     [1]
 ~~~
 
+### gitea delete *repo*
+
+Delete the repository:
+
+```shell
+gitea.delete() { split_repo "$1" && auth api 204 "/repos/$REPLY" -X DELETE; }
+```
+
+~~~shell
+    $ gitea delete foo/bar </dev/null
+    curl --silent --write-out %\{http_code\} --output /dev/null -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    [1]
+    $ curl_status=204 gitea delete foo/bar </dev/null; echo [$?]
+    curl --silent --write-out %\{http_code\} --output /dev/null -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    [0]
+~~~
+
 ### gitea deploy-key *repo keytitle key*
 
 Add a deployment key *key* named *keytitle* to *repo*.  Returns success if the key was successfully added.
@@ -290,6 +307,93 @@ gitea.new() {
       "title": "sample-title",
       "key": "example-key"
     }
+~~~
+
+### gitea vendor [create-opts...]
+
+```shell
+gitea.vendor-merge() { :; }
+
+branch-exists() { git rev-parse --verify "$1" &>/dev/null; }
+
+gitea.vendor() {
+    [[ ! -d .git ]] || loco_error ".git repo must not exist here";
+    [[ -n "${PROJECT_ORG-}"  ]] || PROJECT_ORG=$GITEA_USER
+    [[ -n "${PROJECT_NAME-}" ]] || loco_error "PROJECT_NAME not set"
+
+    local GITEA_GIT_URL=${GITEA_GIT_URL-$GITEA_URL}
+    [[ $GITEA_GIT_URL == *: ]] || GITEA_GIT_URL="${GITEA_GIT_URL%/}/";
+    local GIT_REPO="$GITEA_GIT_URL$PROJECT_ORG/$PROJECT_NAME.git"
+
+    if gitea exists "$PROJECT_ORG/$PROJECT_NAME"; then
+        [[ -n "${PROJECT_TAG-}"  ]] || loco_error "PROJECT_TAG not set"
+        local MESSAGE="Vendor update to $PROJECT_TAG"
+        git clone --bare -b vendor "$GIT_REPO" .git ||
+        git clone --bare "$GIT_REPO" .git   # handle missing-branch case
+    else
+        local MESSAGE="Initial import"
+        gitea new "$PROJECT_ORG/$PROJECT_NAME" "$@"
+        git clone --bare "$GIT_REPO" .git
+    fi
+
+    git config --local --bool core.bare false
+    git add .; git commit -m "$MESSAGE"             # commit to master or vendor
+    branch-exists vendor || git checkout -b vendor  # split off vendor branch if needed
+    git push --all
+
+    [[ -z "${PROJECT_TAG-}" ]] || { git tag "vendor-$PROJECT_TAG"; git push --tags; }
+
+    git checkout master
+    gitea vendor-merge
+}
+```
+
+~~~shell
+# Mock a gitea repo w/a file URL
+    $ GITEA_GIT_URL=$PWD
+    $ mkdir -p some_user/foo
+    $ git --git-dir=some_user/foo.git init --bare  # fake gitea new
+    Initialized empty Git repository in /*/gitea.md/some_user/foo.git/ (glob)
+
+# New Repository
+    $ mkdir foo; cd foo; echo "v1" >f
+    $ curl_status=404 gitea -p -r foo -t 1.1 vendor </dev/null
+    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
+    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
+    {
+      "name": "foo",
+      "private": false
+    }
+    Cloning into bare repository '.git'...
+    warning: You appear to have cloned an empty repository.
+    done.
+    [master (root-commit) *] Initial import (glob)
+     1 file changed, 1 insertion(+)
+     create mode 100644 f
+    Switched to a new branch 'vendor'
+    To /*/some_user/foo.git (glob)
+     * [new branch]      master -> master
+     * [new branch]      vendor -> vendor
+    To /*/some_user/foo.git (glob)
+     * [new tag]         vendor-1.1 -> vendor-1.1
+    Switched to branch 'master'
+
+# Existing Repository
+    $ rm -rf .git
+    $ echo "v2" >>f
+    $ gitea -r foo -t 1.2 vendor </dev/null
+    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
+    Cloning into bare repository '.git'...
+    done.
+    [vendor *] Vendor update to 1.2 (glob)
+     1 file changed, 1 insertion(+)
+    To /*/some_user/foo.git (glob)
+     *..* vendor -> vendor (glob)
+    To /*/some_user/foo.git (glob)
+     * [new tag]         vendor-1.2 -> vendor-1.2
+    Switched to branch 'master'
+
+    $ cd ..
 ~~~
 
 
@@ -378,7 +482,7 @@ The actual API invocation is handled by the  `api` function, which takes a list 
 
 ```shell
 api() {
-    REPLY=$(curl --silent --write-out %{http_code} --output /dev/null "${@:3}" "$GITEA_URL/api/v1/${2#/}")
+    REPLY=$(curl --silent --write-out %{http_code} --output /dev/null "${@:3}" "${GITEA_URL%/}/api/v1/${2#/}")
     eval 'case $REPLY in '"$1) true ;; *) false ;; esac"
 }
 ```

@@ -37,6 +37,7 @@ gitea.-r() { gitea --repo "$@"; }
 gitea.--tag()  { local PROJECT_TAG="$1"; gitea "${@:2}" ; }
 gitea.-t()     { gitea --tag "$@"; }
 gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
+gitea.delete() { split_repo "$1" && auth api 204 "/repos/$REPLY" -X DELETE; }
 gitea.deploy-key() {
     split_repo "$1"
     jmap title "$2" key "$3" | json auth api 201 /repos/$REPLY/keys
@@ -47,6 +48,40 @@ gitea.new() {
     jmap name "$repo" "${GITEA_CREATE_DEFAULTS[@]}" "${@:2}" |
         json api "200|201" "$org/repos?token=$GITEA_API_TOKEN"
     [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
+}
+gitea.vendor-merge() { :; }
+
+branch-exists() { git rev-parse --verify "$1" &>/dev/null; }
+
+gitea.vendor() {
+    [[ ! -d .git ]] || loco_error ".git repo must not exist here";
+    [[ -n "${PROJECT_ORG-}"  ]] || PROJECT_ORG=$GITEA_USER
+    [[ -n "${PROJECT_NAME-}" ]] || loco_error "PROJECT_NAME not set"
+
+    local GITEA_GIT_URL=${GITEA_GIT_URL-$GITEA_URL}
+    [[ $GITEA_GIT_URL == *: ]] || GITEA_GIT_URL="${GITEA_GIT_URL%/}/";
+    local GIT_REPO="$GITEA_GIT_URL$PROJECT_ORG/$PROJECT_NAME.git"
+
+    if gitea exists "$PROJECT_ORG/$PROJECT_NAME"; then
+        [[ -n "${PROJECT_TAG-}"  ]] || loco_error "PROJECT_TAG not set"
+        local MESSAGE="Vendor update to $PROJECT_TAG"
+        git clone --bare -b vendor "$GIT_REPO" .git ||
+        git clone --bare "$GIT_REPO" .git   # handle missing-branch case
+    else
+        local MESSAGE="Initial import"
+        gitea new "$PROJECT_ORG/$PROJECT_NAME" "$@"
+        git clone --bare "$GIT_REPO" .git
+    fi
+
+    git config --local --bool core.bare false
+    git add .; git commit -m "$MESSAGE"             # commit to master or vendor
+    branch-exists vendor || git checkout -b vendor  # split off vendor branch if needed
+    git push --all
+
+    [[ -z "${PROJECT_TAG-}" ]] || { git tag "vendor-$PROJECT_TAG"; git push --tags; }
+
+    git checkout master
+    gitea vendor-merge
 }
 split_repo() {
     [[ "$1" == */* ]] || set -- "$GITEA_USER/$1";
@@ -69,7 +104,7 @@ jmap() {
 json() { "$@" -X POST -H "Content-Type: application/json" -d @-; }
 auth() { "$@" -H "Authorization: token $GITEA_API_TOKEN"; }
 api() {
-    REPLY=$(curl --silent --write-out %{http_code} --output /dev/null "${@:3}" "$GITEA_URL/api/v1/${2#/}")
+    REPLY=$(curl --silent --write-out %{http_code} --output /dev/null "${@:3}" "${GITEA_URL%/}/api/v1/${2#/}")
     eval 'case $REPLY in '"$1) true ;; *) false ;; esac"
 }
 loco_preconfig() {

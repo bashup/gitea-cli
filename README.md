@@ -7,8 +7,10 @@
 You can install the tool by copying [the binary](bin/gitea) onto your `PATH`, or by using [basher](https://github.com/basherpm/basher) to `basher install bashup/gitea-cli`.  In either case, you must have [jq](https://github.com/stedolan/jq/)  and `curl` installed, as well as the [required configuration](#required-configuration) settings to access your gitea or gogs instance.  You can then use the following commands:
 
 * `gitea new` *repo [create-opts...]*  -- create *repo* with the specified options
+* `gitea delete` *repo* -- delete the named repo (use with caution!)
 * `gitea deploy-key` *repo keytitle publickey* -- add the named key as a deployment key for *repo*
 * `gitea exists` *repo* -- return success if *repo* exists, otherwise fail
+* `gitea vendor` *[create-opts...]* -- import current directory to a vendor branch, optionally creating a repository; for full details see [Vendor Imports](#vendor-imports) below.
 
 The built-in commands use the following argument syntax:
 
@@ -34,6 +36,33 @@ Creation prefixes (use before `new` or `vendor`):
 * `--public` or `-p` -- make the created repository public, e.g. `gitea --public new some/thing`
 * `--private` or `-P` -- make the created repository private, e.g. `gitea --private new some/thing`
 
+Vendor option prefixes (use before `vendor` only):
+
+* `--repo` or `-r` -- override the automatically-generated repository settings, e.g. `gitea -r some/thing vendor` sets `PROJECT_ORG=some` and`PROJECT_REPO=thing`.
+* `--tag` or `-t` -- set `PROJECT_TAG` to the supplied version; e.g. `gitea -t 1.2 vendor` will tag the import as `vendor-1.2`.
+
+### Vendor Imports
+
+The `gitea vendor` command attempts to intelligently import the contents of the current directory as a vendor distribution into a possibly-new repository.  It's intended for managing forks of projects that only supply their sources via archive files or a foreign revision control system.  To use it, you need to unpack the vendor-supplied sources and run the command from the resulting directory.  The directory must *not* contain a `.git` subdirectory.
+
+By default, the repository name and organization will be the name of the current directory and `$GITEA_USER` respectively, but you can override these by setting `PROJECT_NAME` and `PROJECT_ORG` on the command line, or via the `--repo` prefix option.
+
+If the repository doesn't exist, it's created with the supplied *create-opts*, if any.  `GITEA_CREATE_DEFAULTS` and the default deploy key (if any) are applied.
+
+On the other hand, if the repository *does* exist, then  a `PROJECT_TAG` *must* be supplied (e.g. via `gitea --tag someversion vendor`).  It will be used to tag the newly imported version (as `vendor-someversion`).
+
+In either case, the code is imported on the `vendor` branch of the repository, which will be created if it does not exist.  (If the vendor branch doesn't exist, the snapshot is commited first to `master`, then branched.) The commit will be tagged as `vendor-$PROJECT_TAG` if `$PROJECT_TAG` is set  (and it *must* be set if the repository already exists).
+
+After the code is imported, branched, tagged, and pushed, the current branch is switched to `master` so that you can begin work on merging.  If you've defined a `gitea.vendor-merge` function in any of the config files, it will be called after the switch to `master`.
+
+As a convenient way of specifying `PROJECT_NAME`, `PROJECT_ORG`, and `PROJECT_TAG`, you can use the `--repo` and `--tag` prefix options.  `--repo` sets `PROJECT_NAME` and `PROJECT_ORG` by splitting its argument, while `--tag` sets `PROJECT_TAG` from its argument.  So, for example, this command:
+
+```shell
+$ gitea --repo foo/bar --tag 1.2 vendor
+```
+
+would run a vendor import with `PROJECT_ORG=foo`, `PROJECT_NAME=bar` and `PROJECT_TAG=1.2`.   If you are creating a new repository, you can also include creation prefix options like `--desc`, `--private`, `--public`, etc.
+
 ## Configuration and Extension
 
 ### Configuration Files
@@ -58,6 +87,7 @@ In order for the predefined subcommands to access your gitea instance, you must 
 
 These variables can also be set via config file(s) or runtime environment:
 
+* `GITEA_GIT_URL` -- the URL prefix used by the `vendor` command for `git clone` operations; defaults to `GITEA_URL` if not specified.  Can be a hostname and `:` for simple ssh URLs, or a full URL base like `git+ssh://user@host`.
 * `GITEA_DEPLOY_KEY`, `GITEA_DEPLOY_KEY_TITLE`  -- if set, new repositories will have this key automatically added to their deploy keys
 * `GITEA_CREATE_DEFAULTS` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE_DEFAULTS=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` to override it.
 
