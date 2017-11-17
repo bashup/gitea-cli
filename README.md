@@ -1,5 +1,19 @@
 # An Extensible Command-line Client for Gitea and Gogs
 
+### Contents
+
+<!-- toc -->
+
+- [Installation and Use](#installation-and-use)
+  * [Prefix Options](#prefix-options)
+  * [Vendor Imports](#vendor-imports)
+- [Configuration and Extension](#configuration-and-extension)
+  * [Configuration Files](#configuration-files)
+  * [Required Configuration](#required-configuration)
+  * [Optional Configuration](#optional-configuration)
+
+<!-- tocstop -->
+
 ## Installation and Use
 
 `gitea` is an extensible tool for interacting with a gogs or gitea instance via its API.  It's implemented as a [loco](https://github.com/bashup/loco) extension, which means that it's extensible and configurable via multiple [configuration files](#configuration-files), including the ability to define custom subcommands of your own.
