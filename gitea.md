@@ -266,6 +266,7 @@ gitea.new() {
 ~~~shell
 # Defaults apply before command line; default API url is /org/ORGNAME/repos
     $ GITEA_CREATE=(private= true)
+    $ export GIT_AUTHOR_NAME="PJ Eby" EMAIL="null@example.com"
     $ gitea new biz/baz description whatever
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/biz/repos\?token=EXAMPLE_TOKEN
     {
@@ -358,7 +359,7 @@ gitea.vendor() {
 
 # New Repository
     $ mkdir foo; cd foo; echo "v1" >f
-    $ curl_status=404 gitea -p -r foo -t 1.1 vendor </dev/null
+    $ curl_status=404 gitea -p -r foo -t 1.1 vendor </dev/null 2>&1|grep -v '^ Author:'
     curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
     {
@@ -382,7 +383,7 @@ gitea.vendor() {
 # Existing Repository
     $ rm -rf .git
     $ echo "v2" >>f
-    $ gitea -r foo -t 1.2 vendor </dev/null
+    $ gitea -r foo -t 1.2 vendor </dev/null 2>&1|grep -v '^ Author:'
     curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
     Cloning into bare repository '.git'...
     done.
