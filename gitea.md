@@ -42,7 +42,7 @@ This file is the source code and main tests for the [generated gitea client](bin
 # Ignore/null out all configuration for testing
     $ loco_user_config() { :;}
     $ loco_site_config() { :;}
-    $ loco_find_project() { LOCO_PROJECT=/dev/null; }
+    $ loco_findproject() { LOCO_PROJECT=/dev/null; }
     $ loco_main no-op
 
 # dummy `curl` for testing

@@ -250,10 +250,10 @@ _loco_config() {
 
 _loco_main() {
     loco_config "$@"
+    fn_exists $LOCO_NAME || eval "$LOCO_NAME() { loco_do \"\$@\"; }"
     ${LOCO_PROJECT:+:} loco_findproject "$@"
     ${LOCO_ROOT:+:}    loco_findroot "$@"
     loco_loadproject "$LOCO_PROJECT"
-    fn_exists $LOCO_NAME || eval "$LOCO_NAME() { loco_do \"\$@\"; }"
     loco_do "$@"
 }
 
