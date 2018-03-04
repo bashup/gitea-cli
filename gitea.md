@@ -2,6 +2,11 @@
 : '
 <!-- ex: set syntax=markdown : '; eval "$(mdsh -E "$BASH_SOURCE")"; # -->
 
+```shell mdsh
+@module gitea.md
+@comment LICENSE
+```
+
 ### Contents
 
 <!-- toc -->
@@ -55,23 +60,6 @@ This file is the source code and main tests for the [generated gitea client](bin
     >     echo $curl_status;
     > }
 ~~~
-
-And source code like this:
-
-```shell
-#!/usr/bin/env bash
-# ---
-# This file was automatically generated from gitea.md - DO NOT EDIT!
-# ---
-```
-
-While mdsh metaprogramming code is like this:
-
-```shell mdsh
-# incorporate the LICENSE file as bash comments
-source realpaths; realpath.location "$MDSH_SOURCE"
-echo; sed -e '1,2d; s/^\(.\)/# \1/; s/^$/#/;' "$REPLY/LICENSE"; echo
-```
 
 ## Prefix Options
 
@@ -525,5 +513,6 @@ loco_findroot() { LOCO_ROOT=$LOCO_PWD; }
 Having configured everything we need, we can simply include loco's source code to do the rest:
 
 ```shell mdsh
-sed -e '/^# LICENSE$/,/^$/d' "$(command -v loco)"
+@import bashup/loco mdsh-source "$BASHER_PACKAGES_PATH/bashup/loco/loco.md"
+@main loco_main
 ```
