@@ -5,6 +5,8 @@
 ```shell mdsh
 @module gitea.md
 @import pjeby/license @comment LICENSE
+@import bashup/loco mdsh-source "$BASHER_PACKAGES_PATH/bashup/loco/loco.md"
+@main loco_main
 ```
 
 ### Contents
@@ -508,11 +510,4 @@ loco_findproject() {
     findup "$LOCO_PWD" "${LOCO_FILE[@]}" && LOCO_PROJECT=$REPLY || LOCO_PROJECT=/dev/null
 }
 loco_findroot() { LOCO_ROOT=$LOCO_PWD; }
-```
-
-Having configured everything we need, we can simply include loco's source code to do the rest:
-
-```shell mdsh
-@import bashup/loco mdsh-source "$BASHER_PACKAGES_PATH/bashup/loco/loco.md"
-@main loco_main
 ```
