@@ -4,7 +4,7 @@
 
 ```shell mdsh
 @module gitea.md
-@comment LICENSE
+@import pjeby/license @comment LICENSE
 ```
 
 ### Contents

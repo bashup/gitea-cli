@@ -264,5 +264,4 @@ done
 for lv in ${!LOCO_@}; do unset $lv; done
 
 LOCO_SCRIPT=$0
-# --- All functions have been defined, main script starts here! ---
 if [[ $0 == "$BASH_SOURCE" ]]; then loco_main "$@"; fi
