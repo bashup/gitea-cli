@@ -65,7 +65,7 @@ If the repository doesn't exist, it's created with the supplied *create-opts*, i
 
 On the other hand, if the repository *does* exist, then  a `PROJECT_TAG` *must* be supplied (e.g. via `gitea --tag someversion vendor`).  It will be used to tag the newly imported version (as `vendor-someversion`).
 
-In either case, the code is imported on the `vendor` branch of the repository, which will be created if it does not exist.  (If the vendor branch doesn't exist, the snapshot is commited first to `master`, then branched.) The commit will be tagged as `vendor-$PROJECT_TAG` if `$PROJECT_TAG` is set  (and it *must* be set if the repository already exists).
+In either case, the code is imported on the `vendor` branch of the repository, which will be created if it does not exist.  (If the vendor branch doesn't exist, the snapshot is commited first to `master`, then branched.) The commit will be tagged as `vendor-$PROJECT_TAG` if `$PROJECT_TAG` is set  (and it *must* be set if the repository already exists).  Code is commited as `"$GITEA_VENDOR_NAME <$GITEA_VENDOR_EMAIL>"`, defaulting to `Vendor <vendor@example.com>`.
 
 After the code is imported, branched, tagged, and pushed, the current branch is switched to `master` so that you can begin work on merging.  If you've defined a `gitea.vendor-merge` function in any of the config files, it will be called after the switch to `master`.
 

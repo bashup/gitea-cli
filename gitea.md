@@ -329,6 +329,9 @@ gitea.vendor() {
     fi
 
     git config --local --bool core.bare false
+    git config --local user.name "${GITEA_VENDOR_NAME:-Vendor}"
+    git config --local user.email "${GITEA_VENDOR_EMAIL:-vendor@example.com}"
+
     git add .; git commit -m "$MESSAGE"             # commit to master or vendor
     branch-exists vendor || git checkout -b vendor  # split off vendor branch if needed
     git push --all
