@@ -4,19 +4,23 @@ dk use: cram              # run tests using the "cram" functional test tool
 dk use: entr-watch        # watch files and re-run tests or other commands
 dk use: shell-console     # make the "console" command enter a subshell
 dk use: bash32            # enable doing tests/console/etc. in bash3.2 w/docker
+dk use: shellcheck        # support running shellcheck (via docker if not installed)
 
 # Define overrides, new commands, functions, etc. here:
 
-dk.bootstrap() {
-    require loco github bashup/loco master bin/loco
-    require mdsh github bashup/mdsh master bin/mdsh
-    require realpaths github bashup/realpaths master realpaths
-    require-any jq
-    require-any yaml2json
-}
+# SC1090 = dynamic 'source' command
+# SC2128 = array/string mixing
+# SC2178 = array/string mixing
+SHELLCHECK_OPTS='-e SC1090,SC2128,SC2178'
 
-dk.build() {
-    dk test && mdsh --out bin/gitea --compile gitea.md
-}
+on "boot" require loco github bashup/loco master bin/loco
+on "boot" require mdsh github bashup/mdsh master bin/mdsh
+on "boot" require realpaths github bashup/realpaths master realpaths
+on "boot" require-any jq
+on "boot" require-any yaml2json
+
+on "test" eval 'dk shellcheck /dev/stdin < <(mdsh --compile gitea.md)'
+
+on "build" mdsh --out bin/gitea --compile gitea.md
 
 cram.files() { ls gitea.md; }

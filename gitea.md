@@ -4,8 +4,8 @@
 
 ```shell mdsh
 @module gitea.md
-@import pjeby/license @comment LICENSE
-@import bashup/loco mdsh-source "$BASHER_PACKAGES_PATH/bashup/loco/loco.md"
+@require pjeby/license @comment LICENSE
+@require bashup/loco mdsh-source "$BASHER_PACKAGES_PATH/bashup/loco/loco.md"
 @main loco_main
 ```
 
@@ -73,7 +73,7 @@ The prefix options work by setting variables and invoking the remainder of the c
     > }
     $ gitea dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE='()'
+    declare -a GITEA_CREATE=()
 
 # Try some combos and abbreviations:
 
@@ -81,7 +81,7 @@ The prefix options work by setting variables and invoking the remainder of the c
     declare -- PROJECT_ORG="bada"
     declare -- PROJECT_NAME="bing"
     declare -- PROJECT_TAG="1.2"
-    declare -a GITEA_CREATE='([0]="description" [1]="foobly" [2]="x" [3]="y" [4]="private=" [5]="false" [6]="private=" [7]="true")'
+    declare -a GITEA_CREATE=([0]="description" [1]="foobly" [2]="x" [3]="y" [4]="private=" [5]="false" [6]="private=" [7]="true")
 ~~~
 
 ### --with *key* *val*
@@ -99,7 +99,7 @@ gitea.--with() {
 ~~~shell
     $ gitea --with foo bar dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE='([0]="foo" [1]="bar")'
+    declare -a GITEA_CREATE=([0]="foo" [1]="bar")
 ~~~
 
 ### --description / --desc / -d *description*
@@ -115,7 +115,7 @@ gitea.-d()            { gitea --description "$@"; }
 ~~~shell
     $ gitea --description something dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE='([0]="description" [1]="something")'
+    declare -a GITEA_CREATE=([0]="description" [1]="something")
 ~~~
 
 ### --public / -p
@@ -128,7 +128,7 @@ gitea.-p()       { gitea --public "$@"; }
 ~~~shell
     $ gitea --public dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE='([0]="private=" [1]="false")'
+    declare -a GITEA_CREATE=([0]="private=" [1]="false")
 ~~~
 
 ### --private / -P
@@ -141,7 +141,7 @@ gitea.-P()        { gitea --private "$@"; }
 ~~~shell
     $ gitea --private dump
     declare -- PROJECT_NAME="gitea.md"
-    declare -a GITEA_CREATE='([0]="private=" [1]="true")'
+    declare -a GITEA_CREATE=([0]="private=" [1]="true")
 ~~~
 
 ### --repo / -r *repo*
@@ -159,12 +159,12 @@ gitea.-r() { gitea --repo "$@"; }
     $ gitea --repo foo/bar dump
     declare -- PROJECT_ORG="foo"
     declare -- PROJECT_NAME="bar"
-    declare -a GITEA_CREATE='()'
+    declare -a GITEA_CREATE=()
 
     $ gitea --repo baz dump
     declare -- PROJECT_ORG="some_user"
     declare -- PROJECT_NAME="baz"
-    declare -a GITEA_CREATE='()'
+    declare -a GITEA_CREATE=()
 ~~~
 
 ### --tag / -t *version*
@@ -180,7 +180,7 @@ gitea.-t()     { gitea --tag "$@"; }
     $ gitea --tag a.b dump
     declare -- PROJECT_NAME="gitea.md"
     declare -- PROJECT_TAG="a.b"
-    declare -a GITEA_CREATE='()'
+    declare -a GITEA_CREATE=()
 ~~~
 
 ## Commands
@@ -434,7 +434,7 @@ jmap() {
         else
             filter+=" | .$1=\$__$arg"
             opts+=(--arg "__$arg" "$2")
-            let arg++
+            ((arg++))
         fi
         shift 2
     done
@@ -477,7 +477,7 @@ The actual API invocation is handled by the  `api` function, which takes a list 
 
 ```shell
 api() {
-    REPLY=$(curl --silent --write-out %{http_code} --output /dev/null "${@:3}" "${GITEA_URL%/}/api/v1/${2#/}")
+    REPLY=$(curl --silent --write-out '%{http_code}' --output /dev/null "${@:3}" "${GITEA_URL%/}/api/v1/${2#/}")
     eval 'case $REPLY in '"$1) true ;; *) false ;; esac"
 }
 ```
