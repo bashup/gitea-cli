@@ -181,17 +181,17 @@ gitea.--repo() {
 gitea.-r() { gitea --repo "$@"; }
 gitea.--tag()  { local PROJECT_TAG="$1"; gitea "${@:2}" ; }
 gitea.-t()     { gitea --tag "$@"; }
-gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
-gitea.delete() { split_repo "$1" && auth api 204 "/repos/$REPLY" -X DELETE; }
+gitea.exists() { split_repo "$1" && auth api 200 404 "repos/$REPLY" ; }
+gitea.delete() { split_repo "$1" && auth api 204 "" "/repos/$REPLY" -X DELETE; }
 gitea.deploy-key() {
     split_repo "$1"
-    jmap title "$2" key "$3" | json auth api 201 /repos/$REPLY/keys
+    jmap title "$2" key "$3" | json auth api 201 "" /repos/$REPLY/keys
 }
 gitea.new() {
     split_repo "$1"; local org="${REPLY[1]}" repo="${REPLY[2]}"
     if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
     jmap name "$repo" "${GITEA_CREATE[@]}" "${@:2}" |
-        json api "200|201" "$org/repos?token=$GITEA_API_TOKEN"
+        json api "200|201" "" "$org/repos?token=$GITEA_API_TOKEN"
     [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
 }
 gitea.vendor-merge() { :; }
@@ -252,9 +252,24 @@ jmap() {
 json() { "$@" -X POST -H "Content-Type: application/json" -d @-; }
 auth() { "$@" -H "Authorization: token $GITEA_API_TOKEN"; }
 api() {
-    REPLY=$(curl --silent --write-out %{http_code} --output /dev/null "${@:3}" "${GITEA_URL%/}/api/v1/${2#/}")
-    eval 'case $REPLY in '"$1) true ;; *) false ;; esac"
+    if ! shopt -q extglob; then
+        # extglob is needed for pattern matching
+        local r=0; shopt -s extglob; api "$@" || r=$?; shopt -u extglob; return $r
+    fi
+    read-curl --silent --write-out '%{http_code}' --output /dev/null "${@:4}" "${GITEA_URL%/}/api/v1/${3#/}"
+    local true="@($1)" false="@($2)"
+    # shellcheck disable=2053  # glob matching is what we want!
+    if [[ $REPLY == $true ]]; then return 0; elif [[ $2 && $REPLY == $false ]]; then return 1
+    else case $REPLY in
+        000) fail "Invalid server response: check GITEA_URL" 78 ;;            # EX_PROTOCOL
+        401) fail "Unauthorized: check GITEA_USER and GITEA_API_TOKEN" 77 ;;  # EX_NOPERM
+        404) fail "Server returned 404 Not Found: check GITEA_URL" 69 ;;      # EX_UNAVAILABLE
+        *)   fail "Failure: HTTP code $REPLY (expected $1${2:+ or $2})" 70 ;; # EX_SOFTWARE
+        esac
+    fi
 }
+read-curl() { REPLY=$(curl "$@"); }
+fail() { echo "$1" >&2; return "${2-64}"; }
 loco_preconfig() {
     LOCO_SCRIPT=$BASH_SOURCE
     LOCO_SITE_CONFIG=/etc/gitea-cli/gitearc

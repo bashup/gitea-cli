@@ -57,10 +57,11 @@ This file is the source code and main tests for the [generated gitea client](bin
     $ GITEA_URL=https://example.com/gitea/
     $ GITEA_USER=some_user
     $ GITEA_API_TOKEN=EXAMPLE_TOKEN
-    $ curl() {
+    $ read-curl() {
     >     { printf -v REPLY ' %q' "curl" "$@"; echo "${REPLY# }"; cat; } >&2;
-    >     echo $curl_status;
+    >     REPLY=${curl_status%%,*}; curl_status=${curl_status#*,}
     > }
+    > curl() { read-curl "$@"; echo "$REPLY"; }
 ~~~
 
 ## Prefix Options
@@ -69,7 +70,8 @@ The prefix options work by setting variables and invoking the remainder of the c
 
 ~~~shell
     $ gitea.dump() {
-    >     declare -p PROJECT_ORG PROJECT_NAME PROJECT_TAG GITEA_CREATE 2>/dev/null || true
+    >     declare -p PROJECT_ORG PROJECT_NAME PROJECT_TAG GITEA_CREATE 2>/dev/null | 
+    >         sed "s/'//g" || true
     > }
     $ gitea dump
     declare -- PROJECT_NAME="gitea.md"
@@ -190,7 +192,7 @@ gitea.-t()     { gitea --tag "$@"; }
 Return success if the repository exists:
 
 ```shell
-gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
+gitea.exists() { split_repo "$1" && auth api 200 404 "repos/$REPLY" ; }
 ```
 
 ~~~shell
@@ -207,13 +209,14 @@ gitea.exists() { split_repo "$1" && auth api 200 "repos/$REPLY" ; }
 Delete the repository:
 
 ```shell
-gitea.delete() { split_repo "$1" && auth api 204 "/repos/$REPLY" -X DELETE; }
+gitea.delete() { split_repo "$1" && auth api 204 "" "/repos/$REPLY" -X DELETE; }
 ```
 
 ~~~shell
     $ gitea delete foo/bar </dev/null
     curl --silent --write-out %\{http_code\} --output /dev/null -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
-    [1]
+    Failure: HTTP code 200 (expected 204)
+    [70]
     $ curl_status=204 gitea delete foo/bar </dev/null; echo [$?]
     curl --silent --write-out %\{http_code\} --output /dev/null -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
     [0]
@@ -226,7 +229,7 @@ Add a deployment key *key* named *keytitle* to *repo*.  Returns success if the k
 ```shell
 gitea.deploy-key() {
     split_repo "$1"
-    jmap title "$2" key "$3" | json auth api 201 /repos/$REPLY/keys
+    jmap title "$2" key "$3" | json auth api 201 "" /repos/$REPLY/keys
 }
 ```
 
@@ -248,7 +251,7 @@ gitea.new() {
     split_repo "$1"; local org="${REPLY[1]}" repo="${REPLY[2]}"
     if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
     jmap name "$repo" "${GITEA_CREATE[@]}" "${@:2}" |
-        json api "200|201" "$org/repos?token=$GITEA_API_TOKEN"
+        json api "200|201" "" "$org/repos?token=$GITEA_API_TOKEN"
     [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
 }
 ```
@@ -352,7 +355,7 @@ gitea.vendor() {
 
 # New Repository
     $ mkdir foo; cd foo; echo "v1" >f
-    $ curl_status=404 gitea -p -r foo -t 1.1 vendor </dev/null 2>&1|grep -v '^ Author:'
+    $ curl_status=404,200 gitea -p -r foo -t 1.1 vendor </dev/null 2>&1|grep -v '^ Author:'
     curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
     {
@@ -473,25 +476,62 @@ auth() { "$@" -H "Authorization: token $GITEA_API_TOKEN"; }
     200
 ~~~
 
-The actual API invocation is handled by the  `api` function, which takes a list of `|`-separated "success" statuses followed by an API path and any extra curl options.  If the curl status matches one of the given statuses, success is returned, otherwise failure:
+The actual API invocation is handled by the  `api` function, which takes a list of `|`-separated "success" statuses and a list of `|`-separated "normal failure" statuses, followed by an API path and any extra curl options.  If the curl status matches one of the given success/failure statuses, success or failure is returned, otherwise an error message is output to stderr and a suitable exit code returned:
 
 ```shell
 api() {
-    REPLY=$(curl --silent --write-out '%{http_code}' --output /dev/null "${@:3}" "${GITEA_URL%/}/api/v1/${2#/}")
-    eval 'case $REPLY in '"$1) true ;; *) false ;; esac"
+    if ! shopt -q extglob; then
+        # extglob is needed for pattern matching
+        local r=0; shopt -s extglob; api "$@" || r=$?; shopt -u extglob; return $r
+    fi
+    read-curl --silent --write-out '%{http_code}' --output /dev/null "${@:4}" "${GITEA_URL%/}/api/v1/${3#/}"
+    local true="@($1)" false="@($2)"
+    # shellcheck disable=2053  # glob matching is what we want!
+    if [[ $REPLY == $true ]]; then return 0; elif [[ $2 && $REPLY == $false ]]; then return 1
+    else case $REPLY in
+        000) fail "Invalid server response: check GITEA_URL" 78 ;;            # EX_PROTOCOL
+        401) fail "Unauthorized: check GITEA_USER and GITEA_API_TOKEN" 77 ;;  # EX_NOPERM
+        404) fail "Server returned 404 Not Found: check GITEA_URL" 69 ;;      # EX_UNAVAILABLE
+        *)   fail "Failure: HTTP code $REPLY (expected $1${2:+ or $2})" 70 ;; # EX_SOFTWARE
+        esac
+    fi
 }
+read-curl() { REPLY=$(curl "$@"); }
+fail() { echo "$1" >&2; return "${2-64}"; }
 ```
 
 ~~~shell
-    $ api 200 /x extra args </dev/null; echo [$?]
+    $ api 200 "" x extra args </dev/null; echo [$?]
     curl --silent --write-out %\{http_code\} --output /dev/null extra args https://example.com/gitea/api/v1/x
     [0]
-    $ curl_status=401 api 200 /y </dev/null
-    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/y
+
+    $ api "" "400|200" x extra args </dev/null; echo [$?]
+    curl --silent --write-out %\{http_code\} --output /dev/null extra args https://example.com/gitea/api/v1/x
     [1]
-    $ curl_status=401 api '200|401' /z </dev/null; echo [$?]
+
+    $ curl_status=000 api 200 "" x extra args </dev/null; echo [$?]
+    curl --silent --write-out %\{http_code\} --output /dev/null extra args https://example.com/gitea/api/v1/x
+    Invalid server response: check GITEA_URL
+    [78]
+
+    $ curl_status=401 api 200 "" /y </dev/null
+    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/y
+    Unauthorized: check GITEA_USER and GITEA_API_TOKEN
+    [77]
+
+    $ curl_status=404 api 200 401 /z </dev/null; echo [$?]
     curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/z
-    [0]
+    Server returned 404 Not Found: check GITEA_URL
+    [69]
+
+    $ curl_status=404 api 200 404 /z </dev/null; echo [$?]
+    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/z
+    [1]
+
+    $ curl_status=501 api 200 401 /z </dev/null; echo [$?]
+    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/z
+    Failure: HTTP code 501 (expected 200 or 401)
+    [70]
 ~~~
 
 
