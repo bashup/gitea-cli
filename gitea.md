@@ -478,7 +478,7 @@ The actual API invocation is handled by the  `api` function, which takes a list 
 ```shell
 api() {
     REPLY=$(curl --silent --write-out '%{http_code}' --output /dev/null "${@:3}" "${GITEA_URL%/}/api/v1/${2#/}")
-    eval 'case $REPLY in '"$1) true ;; *) false ;; esac"
+    eval 'case $REPLY in '"$1) true ;; 000) echo "Failure: Invalid server response. Check GITEA_URL"; false ;; 401) echo "Failure: Unauthorized. Check GITEA_USER and GITEA_API_TOKEN"; false ;; *) echo "Failure: Server returned HTTP code $REPLY" ; false ;; esac"
 }
 ```
 
