@@ -490,8 +490,8 @@ api() {
     if [[ $REPLY == $true ]]; then return 0; elif [[ $2 && $REPLY == $false ]]; then return 1
     else case $REPLY in
         000) fail "Invalid server response: check GITEA_URL" 78 ;;            # EX_PROTOCOL
-        401) fail "Unauthorized: check GITEA_USER and GITEA_API_TOKEN" 77 ;;  # EX_NOPERM
-        404) fail "Server returned 404 Not Found: check GITEA_URL" 69 ;;      # EX_UNAVAILABLE
+        401) fail "Unauthorized: check GITEA_USER and GITEA_API_TOKEN" 77  ;; # EX_NOPERM
+        404) fail "Server returned 404 Not Found" 69                       ;; # EX_UNAVAILABLE
         *)   fail "Failure: HTTP code $REPLY (expected $1${2:+ or $2})" 70 ;; # EX_SOFTWARE
         esac
     fi
@@ -521,7 +521,7 @@ fail() { echo "$1" >&2; return "${2-64}"; }
 
     $ curl_status=404 api 200 401 /z </dev/null; echo [$?]
     curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/z
-    Server returned 404 Not Found: check GITEA_URL
+    Server returned 404 Not Found
     [69]
 
     $ curl_status=404 api 200 404 /z </dev/null; echo [$?]

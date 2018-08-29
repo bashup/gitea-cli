@@ -11,6 +11,8 @@
   * [Configuration Files](#configuration-files)
   * [Required Configuration](#required-configuration)
   * [Optional Configuration](#optional-configuration)
+  * [Creating Custom Commands](#creating-custom-commands)
+  * [Customizing `curl` Behavior](#customizing-curl-behavior)
 
 <!-- tocstop -->
 
@@ -87,7 +89,7 @@ Configuration is loaded by sourcing bash script files from the following locatio
 * `$HOME/.config/gitearc`
 * The *nearest* `.gitearc` found in or above the current directory (i.e., only one is loaded, even if more than one exists)
 
-If more than one file sets the same variable or defines the same function, the later ones override the earlier ones.
+These files can set variables or define functions to change gitea's behavior or add new commands.  If more than one file sets the same variable or defines the same function, the later ones override the earlier ones.
 
 ### Required Configuration
 
@@ -105,5 +107,46 @@ These variables can also be set via config file(s) or runtime environment:
 * `GITEA_DEPLOY_KEY`, `GITEA_DEPLOY_KEY_TITLE`  -- if set, new repositories will have this key automatically added to their deploy keys
 * `GITEA_CREATE` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` (or the equivalent, `gitea --public new some/repo`) to override it.
 
+### Creating Custom Commands
 
+Configuration files can define functions to create new commands.  A function named `gitea.X` adds a new `gitea X` command.  For example, if you wanted to create a command to list a repository's issues in JSON form, you might put something like this in an appropriate config file, to make `gitea issues foo/bar` dump the issues for repository `foo/bar` in JSON:
 
+```shell
+gitea.issues() {
+	split_repo "$1"
+	auth curl --silent "${GITEA_URL%/}/api/v1/repos/$REPLY/issues"
+}
+```
+
+Several functions are available for you to use in creating your commands:
+
+* `split_repo` *repo* -- set `$REPLY` to the full repo name, `${REPLY[1]}` to the organization, and `${REPLY[2]}` to the repo name within the organization.  If *repo* doesn't contain a `/`, the organization is the `$GITEA_USER`.
+
+* `auth` *curl-using-command args...* -- runs *curl-using-command args...* with an added authorization token header after *args*.
+
+* `json`  *curl-using-command args...* -- runs *curl-using-command args...* with added arguments after *args* to configure curl to read data from stdin and submit it as an `application/json` request body.
+
+* `jmap` *[key value]...* -- convert the given key-value argument pairs into a JSON object and write it to stdout.  If a key name ends in `=`, the value must be raw JSON or a valid jq expression, appropriately quoted or escaped.  Otherwise, the value is assumed to be an unescaped string and is encoded as such.  (Typically, you'll pipe the output of this to a `json auth api` command to post or put the data and check the return status.)
+
+* `api` *success failure api-path curl-opts...* -- runs `curl` with *curl-opts* on a url equal to *api-path* prefixed with `${GITEA_URL%/}/api/v1/`.  The returned http status is checked against *success* and *failure*, returning true (0) if the status matches *success*, or false (1) if it matches *failure*.
+
+  Both *success* and *failure* can be either a single status code, or multiple codes separated by `|`.  (Note: you must quote arguments that contain `|`.)  If the returned http status doesn't match either, an error message is output to stderr and the return code is a number greater or equal to 64.  (See [sysexits(3)](https://www.freebsd.org/cgi/man.cgi?query=sysexits&sektion=3#DESCRIPTION) and the [gitea-cli source](gitea.md).)
+
+You can also invoke other gitea-cli commands normally.
+
+### Customizing `curl` Behavior
+
+If you need to customize any `curl` options for *all* gitea-cli commands, you can define a `curl` function in your configuration file that invokes `command curl` with extra options.  For example:
+
+```shell
+# Add a connect timeout
+curl() { command curl --connect-timeout 2 "$@"; }
+
+# Allow self-signed certs
+curl() { command curl --insecure "$@"; }
+
+# Do both
+curl() { command curl --insecure --connect-timeout 2 "$@"; }
+```
+
+If your configuration files define more than one `curl()` function, the last one in the nearest file takes precedence.
