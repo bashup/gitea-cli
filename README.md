@@ -105,5 +105,18 @@ These variables can also be set via config file(s) or runtime environment:
 * `GITEA_DEPLOY_KEY`, `GITEA_DEPLOY_KEY_TITLE`  -- if set, new repositories will have this key automatically added to their deploy keys
 * `GITEA_CREATE` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` (or the equivalent, `gitea --public new some/repo`) to override it.
 
+### Advanced Configuration
 
+Via the configuration file it is also possible to overwrite functions of the `gitea` script. For example:
 
+* To prevent `gitea` from hanging indefinitely if the destination server cannot be reached, set a connect timeout by adding following line, to your `.gitearc`:
+
+    read-curl() { REPLY=$(curl --connect-timeout 2 "$@"); }
+    
+* To allow insecure SSL connections (e.g. due to self-signed certificates), use:
+
+    read-curl() { REPLY=$(curl --insecure "$@"); }
+    
+Note: Only the last definition of a function is used. To apply both sample options, combine them at call level, like:
+
+    read-curl() { REPLY=$(curl --insecure --connect-timeout 2 "$@"); }
