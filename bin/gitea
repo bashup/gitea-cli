@@ -190,7 +190,7 @@ gitea.deploy-key() {
 gitea.new() {
     split_repo "$1"; local org="${REPLY[1]}" repo="${REPLY[2]}"
     if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
-    jmap name "$repo" "${GITEA_CREATE[@]}" "${@:2}" |
+    jmap name "$repo" ${GITEA_CREATE[@]+"${GITEA_CREATE[@]}"} "${@:2}" |
         json api "200|201" "" "$org/repos?token=$GITEA_API_TOKEN"
     [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
 }

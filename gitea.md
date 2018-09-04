@@ -250,7 +250,7 @@ Create the repository; *opts* are key-value pairs to pass to the API, such as `d
 gitea.new() {
     split_repo "$1"; local org="${REPLY[1]}" repo="${REPLY[2]}"
     if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
-    jmap name "$repo" "${GITEA_CREATE[@]}" "${@:2}" |
+    jmap name "$repo" ${GITEA_CREATE[@]+"${GITEA_CREATE[@]}"} "${@:2}" |
         json api "200|201" "" "$org/repos?token=$GITEA_API_TOKEN"
     [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
 }
@@ -258,9 +258,8 @@ gitea.new() {
 
 ~~~shell
 # Defaults apply before command line; default API url is /org/ORGNAME/repos
-    $ GITEA_CREATE=(private= true)
     $ export GIT_AUTHOR_NAME="PJ Eby" EMAIL="null@example.com"
-    $ gitea new biz/baz description whatever
+    $ gitea --private new biz/baz description whatever
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/biz/repos\?token=EXAMPLE_TOKEN
     {
       "name": "baz",
@@ -269,6 +268,7 @@ gitea.new() {
     }
 
 # When the repo is the current user, the API url is /user/repos
+    $ GITEA_CREATE=(private= true)
     $ gitea --public -d something new some_user/spam
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
     {
