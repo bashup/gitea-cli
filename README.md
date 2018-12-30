@@ -24,7 +24,7 @@ You can install the tool by copying [the binary](bin/gitea) onto your `PATH`, or
 
 * `gitea new` *repo [create-opts...]*  -- create *repo* with the specified options
 * `gitea delete` *repo* -- delete the named repo (use with caution!)
-* `gitea deploy-key` *repo keytitle publickey* -- add the named key as a deployment key for *repo*
+* `gitea deploy-key` *repo keytitle publickey [readonly=true]* -- add the named key as a deployment key for *repo*
 * `gitea exists` *repo* -- return success if *repo* exists, otherwise fail
 * `gitea vendor` *[create-opts...]* -- import current directory to a vendor branch, optionally creating a repository; for full details see [Vendor Imports](#vendor-imports) below.
 
@@ -104,7 +104,7 @@ In order for the predefined subcommands to access your gitea instance, you must 
 These variables can also be set via config file(s) or runtime environment:
 
 * `GITEA_GIT_URL` -- the URL prefix used by the `vendor` command for `git clone` operations; defaults to `GITEA_URL` if not specified.  Can be a hostname and `:` for simple ssh URLs, or a full URL base like `git+ssh://user@host`.
-* `GITEA_DEPLOY_KEY`, `GITEA_DEPLOY_KEY_TITLE`  -- if set, new repositories will have this key automatically added to their deploy keys
+* `GITEA_DEPLOY_KEY`, `GITEA_DEPLOY_KEY_TITLE`  -- if set, new repositories will have this key automatically added to their deploy keys.  `GITEA_DEPLOY_READONLY` is a boolean that defaults to `true`; you must explicitly set it to `false` if you want the key to be read/write.
 * `GITEA_CREATE` -- an array of options used as defaults for repository creation.  For example setting `GITEA_CREATE=("private=" "true")` will make new repositories private by default, unless you do `gitea new some/repo private= false` (or the equivalent, `gitea --public new some/repo`) to override it.
 
 ### Creating Custom Commands

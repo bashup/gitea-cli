@@ -24,7 +24,7 @@
   * [Commands](#commands)
     + [gitea exists *repo*](#gitea-exists-repo)
     + [gitea delete *repo*](#gitea-delete-repo)
-    + [gitea deploy-key *repo keytitle key*](#gitea-deploy-key-repo-keytitle-key)
+    + [gitea deploy-key *repo keytitle key [readonly=true]*](#gitea-deploy-key-repo-keytitle-key-readonlytrue)
     + [gitea new *repo [opts...]*](#gitea-new-repo-opts)
     + [gitea vendor [create-opts...]](#gitea-vendor-create-opts)
   * [Utilities](#utilities)
@@ -222,23 +222,24 @@ gitea.delete() { split_repo "$1" && auth api 204 "" "/repos/$REPLY" -X DELETE; }
     [0]
 ~~~
 
-### gitea deploy-key *repo keytitle key*
+### gitea deploy-key *repo keytitle key [readonly=true]*
 
 Add a deployment key *key* named *keytitle* to *repo*.  Returns success if the key was successfully added.
 
 ```shell
 gitea.deploy-key() {
     split_repo "$1"
-    jmap title "$2" key "$3" | json auth api 201 "" /repos/$REPLY/keys
+    jmap title "$2" key "$3" read_only= "${4-true}" | json auth api 201 "" /repos/$REPLY/keys
 }
 ```
 
 ~~~shell
-    $ curl_status=201 gitea deploy-key foo/bar baz spam
+    $ curl_status=201 gitea deploy-key foo/bar baz spam false
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
     {
       "title": "baz",
-      "key": "spam"
+      "key": "spam",
+      "read_only": false
     }
 ~~~
 
@@ -252,7 +253,9 @@ gitea.new() {
     if [[ $org == "$GITEA_USER" ]]; then org=user; else org="org/$org"; fi
     jmap name "$repo" ${GITEA_CREATE[@]+"${GITEA_CREATE[@]}"} "${@:2}" |
         json api "200|201" "" "$org/repos?token=$GITEA_API_TOKEN"
-    [[ ! "${GITEA_DEPLOY_KEY-}" ]] || gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" "$GITEA_DEPLOY_KEY"
+    [[ ! "${GITEA_DEPLOY_KEY-}" ]] ||
+        gitea deploy-key "$1" "${GITEA_DEPLOY_KEY_TITLE:-default}" \
+            "$GITEA_DEPLOY_KEY" "${GITEA_DEPLOY_READONLY:-true}"
 }
 ```
 
@@ -287,11 +290,16 @@ gitea.new() {
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
     {
       "title": "default",
-      "key": "example-key"
+      "key": "example-key",
+      "read_only": true
     }
 
-# and it can have a GITEA_DEPLOY_KEY_TITLE
-    $ GITEA_DEPLOY_KEY=example-key GITEA_DEPLOY_KEY_TITLE=sample-title curl_status=201 gitea new foo/bar
+# and it can have a GITEA_DEPLOY_KEY_TITLE and GITEA_DEPLOY_KEY_READONLY
+    $ GITEA_DEPLOY_KEY=example-key \
+    > GITEA_DEPLOY_KEY_TITLE=sample-title \
+    > GITEA_DEPLOY_READONLY=false \
+    > curl_status=201 \
+    > gitea new foo/bar
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
     {
       "name": "bar",
@@ -300,7 +308,8 @@ gitea.new() {
     curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
     {
       "title": "sample-title",
-      "key": "example-key"
+      "key": "example-key",
+      "read_only": false
     }
 ~~~
 
