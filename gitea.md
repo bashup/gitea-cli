@@ -197,10 +197,10 @@ gitea.exists() { split_repo "$1" && auth api 200 404 "repos/$REPLY" ; }
 
 ~~~shell
     $ gitea exists foo/bar </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    curl --silent --write-out \\n%\{http_code\} -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
     [0]
     $ curl_status=404 gitea exists foo/bar </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    curl --silent --write-out \\n%\{http_code\} -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
     [1]
 ~~~
 
@@ -214,11 +214,11 @@ gitea.delete() { split_repo "$1" && auth api 204 "" "/repos/$REPLY" -X DELETE; }
 
 ~~~shell
     $ gitea delete foo/bar </dev/null
-    curl --silent --write-out %\{http_code\} --output /dev/null -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    curl --silent --write-out \\n%\{http_code\} -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
     Failure: HTTP code 200 (expected 204)
     [70]
     $ curl_status=204 gitea delete foo/bar </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
+    curl --silent --write-out \\n%\{http_code\} -X DELETE -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar
     [0]
 ~~~
 
@@ -235,7 +235,7 @@ gitea.deploy-key() {
 
 ~~~shell
     $ curl_status=201 gitea deploy-key foo/bar baz spam false
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
     {
       "title": "baz",
       "key": "spam",
@@ -263,7 +263,7 @@ gitea.new() {
 # Defaults apply before command line; default API url is /org/ORGNAME/repos
     $ export GIT_AUTHOR_NAME="PJ Eby" EMAIL="null@example.com"
     $ gitea --private new biz/baz description whatever
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/biz/repos\?token=EXAMPLE_TOKEN
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/biz/repos\?token=EXAMPLE_TOKEN
     {
       "name": "baz",
       "private": true,
@@ -273,7 +273,7 @@ gitea.new() {
 # When the repo is the current user, the API url is /user/repos
     $ GITEA_CREATE=(private= true)
     $ gitea --public -d something new some_user/spam
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
     {
       "name": "spam",
       "private": false,
@@ -282,12 +282,12 @@ gitea.new() {
 
 # Deployment happens if you provide a GITEA_DEPLOY_KEY
     $ GITEA_DEPLOY_KEY=example-key curl_status=201 gitea new foo/bar
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
     {
       "name": "bar",
       "private": true
     }
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
     {
       "title": "default",
       "key": "example-key",
@@ -300,12 +300,12 @@ gitea.new() {
     > GITEA_DEPLOY_READONLY=false \
     > curl_status=201 \
     > gitea new foo/bar
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/org/foo/repos\?token=EXAMPLE_TOKEN
     {
       "name": "bar",
       "private": true
     }
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/foo/bar/keys
     {
       "title": "sample-title",
       "key": "example-key",
@@ -365,8 +365,8 @@ gitea.vendor() {
 # New Repository
     $ mkdir foo; cd foo; echo "v1" >f
     $ curl_status=404,200 gitea -p -r foo -t 1.1 vendor </dev/null 2>&1|grep -v '^ Author:'
-    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
-    curl --silent --write-out %\{http_code\} --output /dev/null -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
+    curl --silent --write-out \\n%\{http_code\} -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
+    curl --silent --write-out \\n%\{http_code\} -X POST -H Content-Type:\ application/json -d @- https://example.com/gitea/api/v1/user/repos\?token=EXAMPLE_TOKEN
     {
       "name": "foo",
       "private": false
@@ -389,7 +389,7 @@ gitea.vendor() {
     $ rm -rf .git
     $ echo "v2" >>f
     $ gitea -r foo -t 1.2 vendor </dev/null 2>&1|grep -v '^ Author:'
-    curl --silent --write-out %\{http_code\} --output /dev/null -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
+    curl --silent --write-out \\n%\{http_code\} -H Authorization:\ token\ EXAMPLE_TOKEN https://example.com/gitea/api/v1/repos/some_user/foo
     Cloning into bare repository '.git'...
     done.
     [vendor *] Vendor update to 1.2 (glob)
@@ -493,15 +493,15 @@ api() {
         # extglob is needed for pattern matching
         local r=0; shopt -s extglob; api "$@" || r=$?; shopt -u extglob; return $r
     fi
-    read-curl --silent --write-out '%{http_code}' --output /dev/null "${@:4}" "${GITEA_URL%/}/api/v1/${3#/}"
-    local true="@($1)" false="@($2)"
+    read-curl --silent --write-out '\n%{http_code}' "${@:4}" "${GITEA_URL%/}/api/v1/${3#/}"
+    local true="@($1)" false="@($2)" code=${REPLY##*$'\n'}; REPLY=${REPLY%$code}
     # shellcheck disable=2053  # glob matching is what we want!
-    if [[ $REPLY == $true ]]; then return 0; elif [[ $2 && $REPLY == $false ]]; then return 1
-    else case $REPLY in
+    if [[ $code == $true ]]; then return 0; elif [[ $2 && $code == $false ]]; then return 1
+    else case $code in
         000) fail "Invalid server response: check GITEA_URL" 78 ;;            # EX_PROTOCOL
         401) fail "Unauthorized: check GITEA_USER and GITEA_API_TOKEN" 77  ;; # EX_NOPERM
         404) fail "Server returned 404 Not Found" 69                       ;; # EX_UNAVAILABLE
-        *)   fail "Failure: HTTP code $REPLY (expected $1${2:+ or $2})" 70 ;; # EX_SOFTWARE
+        *)   fail "Failure: HTTP code $code (expected $1${2:+ or $2})" 70 ;; # EX_SOFTWARE
         esac
     fi
 }
@@ -511,34 +511,34 @@ fail() { echo "$1" >&2; return "${2-64}"; }
 
 ~~~shell
     $ api 200 "" x extra args </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null extra args https://example.com/gitea/api/v1/x
+    curl --silent --write-out \\n%\{http_code\} extra args https://example.com/gitea/api/v1/x
     [0]
 
     $ api "" "400|200" x extra args </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null extra args https://example.com/gitea/api/v1/x
+    curl --silent --write-out \\n%\{http_code\} extra args https://example.com/gitea/api/v1/x
     [1]
 
     $ curl_status=000 api 200 "" x extra args </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null extra args https://example.com/gitea/api/v1/x
+    curl --silent --write-out \\n%\{http_code\} extra args https://example.com/gitea/api/v1/x
     Invalid server response: check GITEA_URL
     [78]
 
     $ curl_status=401 api 200 "" /y </dev/null
-    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/y
+    curl --silent --write-out \\n%\{http_code\} https://example.com/gitea/api/v1/y
     Unauthorized: check GITEA_USER and GITEA_API_TOKEN
     [77]
 
     $ curl_status=404 api 200 401 /z </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/z
+    curl --silent --write-out \\n%\{http_code\} https://example.com/gitea/api/v1/z
     Server returned 404 Not Found
     [69]
 
     $ curl_status=404 api 200 404 /z </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/z
+    curl --silent --write-out \\n%\{http_code\} https://example.com/gitea/api/v1/z
     [1]
 
     $ curl_status=501 api 200 401 /z </dev/null; echo [$?]
-    curl --silent --write-out %\{http_code\} --output /dev/null https://example.com/gitea/api/v1/z
+    curl --silent --write-out \\n%\{http_code\} https://example.com/gitea/api/v1/z
     Failure: HTTP code 501 (expected 200 or 401)
     [70]
 ~~~

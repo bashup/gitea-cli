@@ -258,15 +258,15 @@ api() {
         # extglob is needed for pattern matching
         local r=0; shopt -s extglob; api "$@" || r=$?; shopt -u extglob; return $r
     fi
-    read-curl --silent --write-out '%{http_code}' --output /dev/null "${@:4}" "${GITEA_URL%/}/api/v1/${3#/}"
-    local true="@($1)" false="@($2)"
+    read-curl --silent --write-out '\n%{http_code}' "${@:4}" "${GITEA_URL%/}/api/v1/${3#/}"
+    local true="@($1)" false="@($2)" code=${REPLY##*$'\n'}; REPLY=${REPLY%$code}
     # shellcheck disable=2053  # glob matching is what we want!
-    if [[ $REPLY == $true ]]; then return 0; elif [[ $2 && $REPLY == $false ]]; then return 1
-    else case $REPLY in
+    if [[ $code == $true ]]; then return 0; elif [[ $2 && $code == $false ]]; then return 1
+    else case $code in
         000) fail "Invalid server response: check GITEA_URL" 78 ;;            # EX_PROTOCOL
         401) fail "Unauthorized: check GITEA_USER and GITEA_API_TOKEN" 77  ;; # EX_NOPERM
         404) fail "Server returned 404 Not Found" 69                       ;; # EX_UNAVAILABLE
-        *)   fail "Failure: HTTP code $REPLY (expected $1${2:+ or $2})" 70 ;; # EX_SOFTWARE
+        *)   fail "Failure: HTTP code $code (expected $1${2:+ or $2})" 70 ;; # EX_SOFTWARE
         esac
     fi
 }
